@@ -1,0 +1,21 @@
+{
+  "model_name": "lightgbm",
+  "split_name": "group_province",
+  "summary": [
+    {
+      "metric": "rmse",
+      "mean": 12.836847490791712,
+      "std": 0.8160681152950401
+    },
+    {
+      "metric": "mae",
+      "mean": 9.9560697552861,
+      "std": 0.7709234725120407
+    },
+    {
+      "metric": "r2",
+      "mean": 0.06421005214429845,
+      "std": 0.11966142100211209
+    }
+  ]
+}

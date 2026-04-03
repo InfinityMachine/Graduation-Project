@@ -1,0 +1,21 @@
+{
+  "model_name": "geopfnmix_no_residual",
+  "split_name": "group_city",
+  "summary": [
+    {
+      "metric": "rmse",
+      "mean": 12.350613550892376,
+      "std": 1.241571143387901
+    },
+    {
+      "metric": "mae",
+      "mean": 9.496308134402932,
+      "std": 0.9642880123318238
+    },
+    {
+      "metric": "r2",
+      "mean": 0.16191487503483742,
+      "std": 0.05330872607356446
+    }
+  ]
+}

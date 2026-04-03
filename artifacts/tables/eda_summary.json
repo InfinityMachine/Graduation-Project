@@ -1,0 +1,26 @@
+{
+  "shape": [
+    2676,
+    13
+  ],
+  "missing": {
+    "OBJECTID_1": 0,
+    "PROVINCE": 0,
+    "CITY": 0,
+    "COUNTY": 0,
+    "AET": 0,
+    "PM2.5": 0,
+    "ppt": 0,
+    "tem": 0,
+    "wind": 0,
+    "NOX": 0,
+    "SO2": 0,
+    "fertilzier": 0,
+    "manure": 0
+  },
+  "duplicate_rows": 0,
+  "province_count": 31,
+  "city_count": 338,
+  "target_mean": 32.51770647122571,
+  "target_std": 13.596459891179263
+}

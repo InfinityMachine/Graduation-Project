@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pm25-geopfnmix"
+version = "0.1.0"
+description = "County-level PM2.5 prediction on agricultural tabular data"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "catboost>=1.2.10",
+  "category_encoders>=2.8.1",
+  "lightgbm>=4.6.0",
+  "matplotlib>=3.10.0",
+  "numpy>=2.0.2",
+  "pandas>=2.2.2",
+  "scikit-learn>=1.6.1",
+  "scipy>=1.16.3",
+  "seaborn>=0.13.2",
+  "shap>=0.51.0",
+  "statsmodels>=0.14.6",
+  "tabpfn>=7.1.0",
+  "torch>=2.10.0",
+  "xgboost>=3.2.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

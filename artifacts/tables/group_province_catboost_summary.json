@@ -1,0 +1,21 @@
+{
+  "model_name": "catboost",
+  "split_name": "group_province",
+  "summary": [
+    {
+      "metric": "rmse",
+      "mean": 12.890657340683907,
+      "std": 1.2034077059318125
+    },
+    {
+      "metric": "mae",
+      "mean": 10.273303824566192,
+      "std": 1.1217790431662498
+    },
+    {
+      "metric": "r2",
+      "mean": 0.04698262890674321,
+      "std": 0.22979789021935568
+    }
+  ]
+}
