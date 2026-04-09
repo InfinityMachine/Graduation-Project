@@ -16,6 +16,7 @@ from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from xgboost import XGBRegressor
 
+from .auth import has_tabpfn_headless_access, prime_auth_tokens, resolve_hf_token
 from .features import FeatureEngineer
 from .settings import CAT_COLS, CITY_COL, PROVINCE_COL, RANDOM_STATE
 
@@ -23,6 +24,11 @@ try:
     from tabpfn import TabPFNRegressor
 except Exception:  # pragma: no cover - optional dependency path
     TabPFNRegressor = None  # type: ignore[assignment]
+
+try:
+    import torch
+except Exception:  # pragma: no cover - optional dependency path
+    torch = None  # type: ignore[assignment]
 
 
 class BaseRawRegressor:
@@ -196,12 +202,19 @@ class OptionalTabPFNRegressorWrapper(BaseRawRegressor):
     def __init__(self) -> None:
         if TabPFNRegressor is None:
             raise RuntimeError("tabpfn is not importable in the current environment.")
-        if not os.environ.get("TABPFN_TOKEN"):
-            raise RuntimeError("TABPFN_TOKEN is required for headless TabPFN model download.")
+        prime_auth_tokens()
+        if not resolve_hf_token():
+            raise RuntimeError("HF_TOKEN is required for TabPFN model download.")
+        if not has_tabpfn_headless_access():
+            raise RuntimeError(
+                "TabPFN headless mode requires a Prior Labs access token via TABPFN_TOKEN "
+                "or a cached accepted-license token."
+            )
 
         self.feature_engineer = FeatureEngineer()
         self.preprocessor: ColumnTransformer | None = None
         self.model: TabPFNRegressor | None = None
+        self.device = "cuda" if torch is not None and torch.cuda.is_available() else "cpu"
 
     def fit(self, frame: pd.DataFrame, target: pd.Series) -> "OptionalTabPFNRegressorWrapper":
         engineered = self.feature_engineer.fit_transform(frame)
@@ -228,7 +241,7 @@ class OptionalTabPFNRegressorWrapper(BaseRawRegressor):
         train_array = self.preprocessor.fit_transform(engineered, target)
         categorical_indices = list(range(len(num_cols), len(num_cols) + len(cat_cols)))
         self.model = TabPFNRegressor(
-            device="cuda",
+            device=self.device,
             random_state=RANDOM_STATE,
             n_estimators=4,
             fit_mode="fit_preprocessors",
@@ -293,11 +306,13 @@ class GeoPFNMixRegressor(BaseRawRegressor):
         self,
         *,
         global_model_name: str = "rf",
+        prior_model_name: str = "lightgbm",
         use_residual_branch: bool = True,
         use_prior_branch: bool = True,
         inner_splits: int = 3,
     ) -> None:
         self.global_model_name = global_model_name
+        self.default_prior_model_name = prior_model_name
         self.use_residual_branch = use_residual_branch
         self.use_prior_branch = use_prior_branch
         self.inner_splits = inner_splits
@@ -321,7 +336,15 @@ class GeoPFNMixRegressor(BaseRawRegressor):
 
         if self.use_prior_branch:
             self.prior_model = self._make_prior_model()
-            self.prior_model.fit(frame, target)
+            try:
+                self.prior_model.fit(frame, target)
+            except Exception:
+                if self.prior_model_name == "tabpfn":
+                    self.prior_model_name = "lightgbm"
+                    self.prior_model = SklearnTableRegressor("lightgbm")
+                    self.prior_model.fit(frame, target)
+                else:
+                    raise
 
         if not self.use_prior_branch:
             return self
@@ -350,7 +373,15 @@ class GeoPFNMixRegressor(BaseRawRegressor):
                 fold_geo_shift = fold_residual.predict(valid_frame)
 
             fold_prior = self._make_prior_model()
-            fold_prior.fit(train_frame, train_target)
+            try:
+                fold_prior.fit(train_frame, train_target)
+            except Exception:
+                if self.prior_model_name == "tabpfn":
+                    self.prior_model_name = "lightgbm"
+                    fold_prior = SklearnTableRegressor("lightgbm")
+                    fold_prior.fit(train_frame, train_target)
+                else:
+                    raise
             fold_prior_pred_valid = fold_prior.predict(valid_frame)
 
             meta_rows.append(
@@ -434,7 +465,9 @@ class GeoPFNMixRegressor(BaseRawRegressor):
         if self.prior_model_name is not None:
             chosen = self.prior_model_name
         else:
-            chosen = "tabpfn" if os.environ.get("TABPFN_TOKEN") else "lightgbm"
+            chosen = self.default_prior_model_name
+            if chosen == "tabpfn" and not has_tabpfn_headless_access():
+                chosen = "lightgbm"
             self.prior_model_name = chosen
 
         if chosen == "tabpfn":
@@ -461,11 +494,25 @@ def make_model(model_name: str) -> BaseRawRegressor:
     if model_name in {"ridge", "rf", "hgbt", "lightgbm", "xgboost"}:
         return SklearnTableRegressor(model_name)
     if model_name == "geopfnmix":
-        return GeoPFNMixRegressor()
+        return GeoPFNMixRegressor(prior_model_name="lightgbm")
     if model_name == "geopfnmix_catboost":
-        return GeoPFNMixRegressor(global_model_name="catboost")
+        return GeoPFNMixRegressor(global_model_name="catboost", prior_model_name="lightgbm")
     if model_name == "geopfnmix_no_residual":
-        return GeoPFNMixRegressor(use_residual_branch=False, use_prior_branch=True)
+        return GeoPFNMixRegressor(
+            prior_model_name="lightgbm",
+            use_residual_branch=False,
+            use_prior_branch=True,
+        )
+    if model_name == "geopfnmix_tabpfn":
+        return GeoPFNMixRegressor(prior_model_name="tabpfn")
+    if model_name == "geopfnmix_catboost_tabpfn":
+        return GeoPFNMixRegressor(global_model_name="catboost", prior_model_name="tabpfn")
+    if model_name == "geopfnmix_no_residual_tabpfn":
+        return GeoPFNMixRegressor(
+            prior_model_name="tabpfn",
+            use_residual_branch=False,
+            use_prior_branch=True,
+        )
     if model_name == "geopfnmix_no_prior":
         return GeoPFNMixRegressor(use_residual_branch=True, use_prior_branch=False)
     if model_name == "tabpfn":

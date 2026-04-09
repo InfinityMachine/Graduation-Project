@@ -1,0 +1,21 @@
+{
+  "model_name": "tabpfn",
+  "split_name": "group_province",
+  "summary": [
+    {
+      "metric": "rmse",
+      "mean": 12.2525522129102,
+      "std": 1.1648703001517562
+    },
+    {
+      "metric": "mae",
+      "mean": 9.504692914526766,
+      "std": 1.0824299990209727
+    },
+    {
+      "metric": "r2",
+      "mean": 0.155420321224532,
+      "std": 0.03883811108864085
+    }
+  ]
+}

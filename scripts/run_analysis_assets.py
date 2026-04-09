@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import shap
@@ -13,20 +14,164 @@ from pm25_geopfnmix.settings import FIGURES_DIR, TABLES_DIR, ensure_directories
 
 sns.set_theme(style="whitegrid", context="talk")
 
+PROVINCE_LABELS = {
+    "上海市": "Shanghai",
+    "云南省": "Yunnan",
+    "内蒙古自治区": "Inner Mongolia",
+    "北京市": "Beijing",
+    "吉林省": "Jilin",
+    "四川省": "Sichuan",
+    "天津市": "Tianjin",
+    "宁夏回族自治区": "Ningxia",
+    "安徽省": "Anhui",
+    "山东省": "Shandong",
+    "山西省": "Shanxi",
+    "广东省": "Guangdong",
+    "广西壮族自治区": "Guangxi",
+    "新疆维吾尔自治区": "Xinjiang",
+    "江苏省": "Jiangsu",
+    "江西省": "Jiangxi",
+    "河北省": "Hebei",
+    "河南省": "Henan",
+    "浙江省": "Zhejiang",
+    "海南省": "Hainan",
+    "湖北省": "Hubei",
+    "湖南省": "Hunan",
+    "甘肃省": "Gansu",
+    "福建省": "Fujian",
+    "西藏自治区": "Tibet",
+    "贵州省": "Guizhou",
+    "辽宁省": "Liaoning",
+    "重庆市": "Chongqing",
+    "陕西省": "Shaanxi",
+    "青海省": "Qinghai",
+    "黑龙江省": "Heilongjiang",
+}
+
+MODEL_LABELS = {
+    "ridge": "Ridge",
+    "rf": "RandomForest",
+    "hgbt": "HistGBDT",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+    "catboost": "CatBoost",
+    "tabpfn": "TabPFN",
+    "geopfnmix_no_prior": "GeoPFNMix-no-prior",
+    "geopfnmix_no_residual": "GeoPFNMix-Lite",
+    "geopfnmix_no_residual_tabpfn": "GeoPFNMix-Lite-TabPFN",
+    "geopfnmix": "GeoPFNMix",
+    "geopfnmix_catboost": "GeoPFNMix-CatBoost",
+    "geopfnmix_catboost_tabpfn": "GeoPFNMix-CatBoost-TabPFN",
+}
+
+SPLIT_LABELS = {
+    "random_kfold": "RandomKFold",
+    "group_city": "GroupKFold(CITY)",
+    "group_province": "GroupKFold(PROVINCE)",
+}
+
+
+def _clean_feature_name(name: str) -> str:
+    return name.replace("num__", "").replace("cat__", "")
+
+
+def _to_province_english(series: pd.Series) -> pd.Series:
+    return series.map(PROVINCE_LABELS).fillna(series)
+
+
+def _format_model_names(frame: pd.DataFrame, column: str = "model_name") -> pd.DataFrame:
+    out = frame.copy()
+    out[column] = out[column].map(MODEL_LABELS).fillna(out[column])
+    return out
+
+
+def save_protocol_heatmap(summary: pd.DataFrame) -> None:
+    plot_frame = summary[summary["metric"] == "rmse"].copy()
+    plot_frame["model_name"] = plot_frame["model_name"].map(MODEL_LABELS).fillna(plot_frame["model_name"])
+    plot_frame["split_name"] = plot_frame["split_name"].map(SPLIT_LABELS).fillna(plot_frame["split_name"])
+    heatmap_frame = plot_frame.pivot(index="model_name", columns="split_name", values="mean")
+    heatmap_frame = heatmap_frame.reindex(
+        columns=["RandomKFold", "GroupKFold(CITY)", "GroupKFold(PROVINCE)"]
+    )
+    fig, ax = plt.subplots(figsize=(10, 5.8))
+    sns.heatmap(heatmap_frame, annot=True, fmt=".2f", cmap="YlGnBu", ax=ax)
+    ax.set_title("RMSE Across Evaluation Protocols")
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "baseline_protocol_heatmap.png", dpi=200)
+    plt.close(fig)
+    heatmap_frame.reset_index().to_csv(TABLES_DIR / "baseline_protocol_rmse_matrix.csv", index=False)
+
+
+def save_protocol_best_tables(summary: pd.DataFrame) -> None:
+    rmse_frame = summary[summary["metric"] == "rmse"].copy()
+    best_rows = rmse_frame.loc[rmse_frame.groupby("split_name")["mean"].idxmin()].copy()
+    best_rows["split_label"] = best_rows["split_name"].map(SPLIT_LABELS).fillna(best_rows["split_name"])
+    best_rows["model_label"] = best_rows["model_name"].map(MODEL_LABELS).fillna(best_rows["model_name"])
+    best_rows = best_rows.sort_values("mean").reset_index(drop=True)
+
+    random_best = float(best_rows.loc[best_rows["split_name"] == "random_kfold", "mean"].iloc[0])
+    best_rows["rmse_increase_vs_random_best_pct"] = ((best_rows["mean"] - random_best) / random_best) * 100.0
+    best_rows[
+        [
+            "split_name",
+            "split_label",
+            "model_name",
+            "model_label",
+            "mean",
+            "std",
+            "rmse_increase_vs_random_best_pct",
+        ]
+    ].to_csv(TABLES_DIR / "protocol_best_models.csv", index=False)
+
+    grouped = rmse_frame.pivot(index="model_name", columns="split_name", values="mean").reset_index()
+    grouped["model_label"] = grouped["model_name"].map(MODEL_LABELS).fillna(grouped["model_name"])
+    grouped["city_minus_random"] = grouped["group_city"] - grouped["random_kfold"]
+    grouped["province_minus_random"] = grouped["group_province"] - grouped["random_kfold"]
+    grouped["city_increase_pct"] = grouped["city_minus_random"] / grouped["random_kfold"] * 100.0
+    grouped["province_increase_pct"] = grouped["province_minus_random"] / grouped["random_kfold"] * 100.0
+    grouped.to_csv(TABLES_DIR / "protocol_generalization_gap.csv", index=False)
+
 
 def save_model_comparison(summary: pd.DataFrame) -> None:
     plot_frame = summary[summary["metric"] == "rmse"].copy().sort_values("mean")
+    plot_frame["model_name"] = plot_frame["model_name"].map(MODEL_LABELS).fillna(plot_frame["model_name"])
     fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(data=plot_frame, x="mean", y="model_name", palette="crest", ax=ax)
+    sns.barplot(data=plot_frame, x="mean", y="model_name", hue="model_name", palette="crest", ax=ax, legend=False)
     ax.set_xlabel("RMSE")
     ax.set_ylabel("")
-    ax.set_title("Group-City RMSE Comparison")
+    ax.set_title("GroupKFold(CITY) RMSE Comparison")
     fig.tight_layout()
     fig.savefig(FIGURES_DIR / "group_city_model_comparison.png", dpi=200)
     plt.close(fig)
 
 
+def save_ablation_metrics(summary: pd.DataFrame) -> None:
+    plot_frame = _format_model_names(summary[summary["metric"].isin(["rmse", "mae"])].copy())
+    plot_frame["metric"] = plot_frame["metric"].str.upper()
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5.5))
+    for axis, metric_name in zip(axes, ["RMSE", "MAE"]):
+        metric_frame = plot_frame[plot_frame["metric"] == metric_name].sort_values("mean")
+        sns.barplot(
+            data=metric_frame,
+            x="mean",
+            y="model_name",
+            hue="model_name",
+            palette="viridis",
+            ax=axis,
+            legend=False,
+        )
+        axis.set_title(f"Ablation Comparison by {metric_name}")
+        axis.set_xlabel(metric_name)
+        axis.set_ylabel("")
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "geopfnmix_ablation_metrics.png", dpi=200)
+    plt.close(fig)
+
+
 def save_prediction_scatter(frame: pd.DataFrame) -> None:
+    model_label = frame["model_label"].iloc[0]
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.scatterplot(
         data=frame,
@@ -40,43 +185,92 @@ def save_prediction_scatter(frame: pd.DataFrame) -> None:
     line_min = float(min(frame["y_true"].min(), frame["y_pred"].min()))
     line_max = float(max(frame["y_true"].max(), frame["y_pred"].max()))
     ax.plot([line_min, line_max], [line_min, line_max], linestyle="--", color="#aa4c4c", linewidth=2)
-    ax.set_title("GeoPFNMix-Lite OOF Predictions")
+    ax.set_title(f"{model_label} OOF Predictions")
     ax.set_xlabel("Observed PM2.5")
     ax.set_ylabel("Predicted PM2.5")
     fig.tight_layout()
-    fig.savefig(FIGURES_DIR / "geopfnmix_lite_scatter.png", dpi=200)
+    fig.savefig(FIGURES_DIR / "best_geopfnmix_scatter.png", dpi=200)
     plt.close(fig)
 
 
 def save_province_error(frame: pd.DataFrame) -> None:
+    model_label = frame["model_label"].iloc[0]
     plot_frame = (
         frame.groupby("PROVINCE", as_index=False)["abs_error"]
         .mean()
         .sort_values("abs_error", ascending=False)
     )
+    plot_frame["province_en"] = _to_province_english(plot_frame["PROVINCE"])
     fig, ax = plt.subplots(figsize=(10, 11))
-    sns.barplot(data=plot_frame, x="abs_error", y="PROVINCE", palette="mako", ax=ax)
+    sns.barplot(
+        data=plot_frame,
+        x="abs_error",
+        y="province_en",
+        hue="province_en",
+        palette="mako",
+        ax=ax,
+        legend=False,
+    )
     ax.set_xlabel("Mean Absolute Error")
     ax.set_ylabel("")
-    ax.set_title("Province-Level Error of GeoPFNMix-Lite")
+    ax.set_title(f"Province-Level Error of {model_label}")
     fig.tight_layout()
     fig.savefig(FIGURES_DIR / "province_level_mae.png", dpi=200)
     plt.close(fig)
-    plot_frame.to_csv(TABLES_DIR / "province_level_mae.csv", index=False)
+    plot_frame.rename(columns={"PROVINCE": "province_cn"}).to_csv(TABLES_DIR / "province_level_mae.csv", index=False)
+
+    top_bottom = pd.concat([plot_frame.head(5), plot_frame.tail(5)], ignore_index=True)
+    top_bottom.rename(columns={"PROVINCE": "province_cn"}).to_csv(
+        TABLES_DIR / "province_level_mae_top_bottom.csv", index=False
+    )
 
 
-def save_shap_assets() -> None:
+def save_error_by_target_bin(frame: pd.DataFrame) -> None:
+    model_label = frame["model_label"].iloc[0]
+    plot_frame = frame.copy()
+    plot_frame["pm25_bin"] = pd.cut(
+        plot_frame["y_true"],
+        bins=[-np.inf, 20.0, 35.0, 50.0, np.inf],
+        labels=["<20", "20-35", "35-50", ">=50"],
+    )
+    summary = (
+        plot_frame.groupby("pm25_bin", observed=False)
+        .agg(
+            sample_count=("row_id", "count"),
+            mae=("abs_error", "mean"),
+            rmse=("abs_error", lambda values: float(np.sqrt(np.mean(np.square(values))))),
+        )
+        .reset_index()
+    )
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    sns.barplot(data=summary, x="pm25_bin", y="mae", hue="pm25_bin", palette="flare", ax=ax, legend=False)
+    ax.set_xlabel("Observed PM2.5 Bin")
+    ax.set_ylabel("Mean Absolute Error")
+    ax.set_title(f"{model_label} Error by PM2.5 Range")
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "geopfnmix_error_by_target_bin.png", dpi=200)
+    plt.close(fig)
+    summary.to_csv(TABLES_DIR / "geopfnmix_error_by_target_bin.csv", index=False)
+
+
+def save_shap_assets(global_expert_name: str) -> None:
     dataset = load_dataset()
-    model = make_model("rf")
+    model = make_model(global_expert_name)
     model.fit(dataset.features, dataset.target)
 
-    engineered = model.feature_engineer.transform(dataset.features)  # type: ignore[attr-defined]
-    transformed = model.pipeline.named_steps["preprocessor"].transform(engineered)  # type: ignore[attr-defined]
-    regressor = model.pipeline.named_steps["model"]  # type: ignore[attr-defined]
-    feature_names = model.pipeline.named_steps["preprocessor"].get_feature_names_out()  # type: ignore[attr-defined]
+    sample_size = min(128, dataset.features.shape[0])
 
-    sample_size = min(128, transformed.shape[0])
-    transformed_sample = transformed[:sample_size]
+    if global_expert_name == "catboost":
+        engineered = model.feature_engineer.transform(dataset.features)  # type: ignore[attr-defined]
+        transformed_sample = engineered.iloc[:sample_size].copy()
+        regressor = model.model  # type: ignore[attr-defined]
+        feature_names = transformed_sample.columns.tolist()
+    else:
+        engineered = model.feature_engineer.transform(dataset.features)  # type: ignore[attr-defined]
+        transformed = model.pipeline.named_steps["preprocessor"].transform(engineered)  # type: ignore[attr-defined]
+        transformed_sample = transformed[:sample_size]
+        regressor = model.pipeline.named_steps["model"]  # type: ignore[attr-defined]
+        feature_names = model.pipeline.named_steps["preprocessor"].get_feature_names_out()  # type: ignore[attr-defined]
 
     explainer = shap.TreeExplainer(regressor)
     shap_values = explainer.shap_values(transformed_sample)
@@ -86,10 +280,12 @@ def save_shap_assets() -> None:
     shap_frame = pd.DataFrame(
         {
             "feature": feature_names,
+            "feature_clean": [_clean_feature_name(name) for name in feature_names],
             "mean_abs_shap": pd.DataFrame(shap_values, columns=feature_names).abs().mean().values,
         }
     ).sort_values("mean_abs_shap", ascending=False)
-    shap_frame.to_csv(TABLES_DIR / "rf_global_shap_importance.csv", index=False)
+    shap_frame.to_csv(TABLES_DIR / "best_global_expert_shap_importance.csv", index=False)
+    shap_frame.head(10).to_csv(TABLES_DIR / "best_global_expert_shap_top10.csv", index=False)
 
     plt.figure(figsize=(10, 7))
     shap.summary_plot(
@@ -101,7 +297,7 @@ def save_shap_assets() -> None:
         show=False,
     )
     plt.tight_layout()
-    plt.savefig(FIGURES_DIR / "rf_global_shap_bar.png", dpi=200, bbox_inches="tight")
+    plt.savefig(FIGURES_DIR / "best_global_expert_shap_bar.png", dpi=200, bbox_inches="tight")
     plt.close()
 
 
@@ -109,19 +305,32 @@ def main() -> None:
     warnings.filterwarnings("ignore")
     ensure_directories()
 
-    summary = pd.read_csv(TABLES_DIR / "geopfnmix_ablation_summary.csv")
-    save_model_comparison(summary)
+    baseline_summary = pd.read_csv(TABLES_DIR / "baseline_summary.csv")
+    save_protocol_heatmap(baseline_summary)
+    save_protocol_best_tables(baseline_summary)
+
+    ablation_summary = pd.read_csv(TABLES_DIR / "geopfnmix_ablation_summary.csv")
+    save_model_comparison(ablation_summary)
+    save_ablation_metrics(ablation_summary)
+
+    ablation_rmse = ablation_summary[ablation_summary["metric"] == "rmse"].copy()
+    geopfnmix_candidates = ablation_rmse[ablation_rmse["model_name"].str.startswith("geopfnmix")].copy()
+    best_model_name = geopfnmix_candidates.sort_values("mean").iloc[0]["model_name"]
+    best_model_label = MODEL_LABELS.get(best_model_name, best_model_name)
+    best_global_expert = "catboost" if best_model_name == "geopfnmix_catboost" else "rf"
 
     dataset = load_dataset()
-    prediction_frame = pd.read_csv(TABLES_DIR / "group_city_geopfnmix_no_residual_oof.csv")
+    prediction_frame = pd.read_csv(TABLES_DIR / f"group_city_{best_model_name}_oof.csv")
     prediction_frame = prediction_frame.merge(
         dataset.frame.reset_index().rename(columns={"index": "row_id"})[["row_id", "PROVINCE"]],
         on="row_id",
         how="left",
     )
+    prediction_frame["model_label"] = best_model_label
     save_prediction_scatter(prediction_frame)
     save_province_error(prediction_frame)
-    save_shap_assets()
+    save_error_by_target_bin(prediction_frame)
+    save_shap_assets(best_global_expert)
 
 
 if __name__ == "__main__":

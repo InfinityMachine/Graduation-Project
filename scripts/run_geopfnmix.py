@@ -19,9 +19,14 @@ def main() -> None:
     experiment_names = [
         "rf",
         "catboost",
+        "tabpfn",
         "geopfnmix_no_prior",
         "geopfnmix_no_residual",
+        "geopfnmix_no_residual_tabpfn",
         "geopfnmix",
+        "geopfnmix_tabpfn",
+        "geopfnmix_catboost",
+        "geopfnmix_catboost_tabpfn",
     ]
 
     results = {}
@@ -44,15 +49,68 @@ def main() -> None:
     summary_table = pd.DataFrame(summary_rows)
     summary_table.to_csv(TABLES_DIR / "geopfnmix_ablation_summary.csv", index=False)
 
-    best_baseline = results["rf"]
-    final_model = results["geopfnmix"]
-    significance = compare_paired_errors(best_baseline, final_model)
+    comparisons = [
+        ("rf", "geopfnmix_no_residual", "rf_vs_geopfnmix_lite"),
+        ("rf", "geopfnmix", "rf_vs_geopfnmix_full"),
+        ("geopfnmix_no_residual", "geopfnmix", "geopfnmix_lite_vs_full"),
+        ("catboost", "geopfnmix_catboost", "catboost_vs_geopfnmix_catboost"),
+        ("geopfnmix", "geopfnmix_catboost", "geopfnmix_full_vs_geopfnmix_catboost"),
+        (
+            "geopfnmix",
+            "geopfnmix_tabpfn",
+            "geopfnmix_full_lightgbm_vs_tabpfn",
+        ),
+        (
+            "geopfnmix_no_residual_tabpfn",
+            "geopfnmix_tabpfn",
+            "geopfnmix_lite_tabpfn_vs_full_tabpfn",
+        ),
+        (
+            "geopfnmix_no_residual",
+            "geopfnmix_no_residual_tabpfn",
+            "geopfnmix_lite_lightgbm_vs_tabpfn",
+        ),
+        (
+            "geopfnmix_catboost",
+            "geopfnmix_catboost_tabpfn",
+            "geopfnmix_catboost_lightgbm_vs_tabpfn",
+        ),
+        (
+            "tabpfn",
+            "geopfnmix_no_residual_tabpfn",
+            "tabpfn_vs_geopfnmix_lite_tabpfn",
+        ),
+        (
+            "tabpfn",
+            "geopfnmix_tabpfn",
+            "tabpfn_vs_geopfnmix_full_tabpfn",
+        ),
+        (
+            "tabpfn",
+            "geopfnmix_catboost_tabpfn",
+            "tabpfn_vs_geopfnmix_catboost_tabpfn",
+        ),
+    ]
+    significance_rows: list[dict[str, str | float | int]] = []
+    significance_payload: dict[str, dict[str, str | float | int]] = {}
+
+    for reference_name, challenger_name, comparison_name in comparisons:
+        stats = compare_paired_errors(results[reference_name], results[challenger_name])
+        row = {
+            "comparison": comparison_name,
+            "reference_model": reference_name,
+            "challenger_model": challenger_name,
+            **stats,
+        }
+        significance_rows.append(row)
+        significance_payload[comparison_name] = row
 
     with open(TABLES_DIR / "geopfnmix_significance.json", "w", encoding="utf-8") as handle:
-        json.dump(significance, handle, ensure_ascii=False, indent=2)
+        json.dump(significance_payload, handle, ensure_ascii=False, indent=2)
+    pd.DataFrame(significance_rows).to_csv(TABLES_DIR / "geopfnmix_significance_pairs.csv", index=False)
 
     print(summary_table.to_string(index=False), flush=True)
-    print(json.dumps(significance, ensure_ascii=False, indent=2), flush=True)
+    print(json.dumps(significance_payload, ensure_ascii=False, indent=2), flush=True)
 
 
 if __name__ == "__main__":

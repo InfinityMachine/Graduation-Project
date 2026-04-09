@@ -1,17 +1,1 @@
-[
-  {
-    "model_name": "tabpfn",
-    "split_name": "random_kfold",
-    "reason": "TABPFN_TOKEN is required for headless TabPFN model download."
-  },
-  {
-    "model_name": "tabpfn",
-    "split_name": "group_city",
-    "reason": "TABPFN_TOKEN is required for headless TabPFN model download."
-  },
-  {
-    "model_name": "tabpfn",
-    "split_name": "group_province",
-    "reason": "TABPFN_TOKEN is required for headless TabPFN model download."
-  }
-]
+[]

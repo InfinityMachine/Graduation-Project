@@ -1,0 +1,4 @@
+split_name,split_label,model_name,model_label,mean,std,rmse_increase_vs_random_best_pct
+random_kfold,RandomKFold,tabpfn,TabPFN,9.325022049900696,0.4249130599058884,0.0
+group_province,GroupKFold(PROVINCE),tabpfn,TabPFN,12.2525522129102,1.1648703001517562,31.394351105482688
+group_city,GroupKFold(CITY),tabpfn,TabPFN,12.500908353030416,0.8597306984576367,34.05768143104328
