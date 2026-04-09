@@ -1,7 +1,7 @@
 from .settings import (
     ARTIFACTS_DIR,
     CAT_COLS,
-    DATA_PATH,
+    DATA_DIR,
     GROUP_COL,
     NUM_COLS,
     TARGET_COL,
@@ -11,7 +11,7 @@ from .settings import (
 __all__ = [
     "ARTIFACTS_DIR",
     "CAT_COLS",
-    "DATA_PATH",
+    "DATA_DIR",
     "GROUP_COL",
     "NUM_COLS",
     "TARGET_COL",

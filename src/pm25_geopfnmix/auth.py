@@ -16,8 +16,12 @@ _TABPFN_CACHE_FILES = (
 
 @lru_cache(maxsize=1)
 def _load_local_token_module() -> ModuleType | None:
-    token_path = ROOT / "token.py"
-    if not token_path.exists():
+    token_path = None
+    for candidate in (ROOT / "HF_token.py", ROOT / "token.py"):
+        if candidate.exists():
+            token_path = candidate
+            break
+    if token_path is None:
         return None
 
     spec = importlib.util.spec_from_file_location("pm25_geopfnmix_local_token", token_path)

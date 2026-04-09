@@ -11,7 +11,7 @@ from sklearn.model_selection import GroupKFold, KFold
 
 from .data import DatasetBundle
 from .models import BaseRawRegressor
-from .settings import GROUP_COL, RANDOM_STATE
+from .settings import GROUP_COL, PROVINCE_COL, RANDOM_STATE
 
 
 def compute_metrics(y_true: pd.Series | np.ndarray, y_pred: pd.Series | np.ndarray) -> dict[str, float]:
@@ -57,7 +57,7 @@ def evaluate_cv(
         split_iter = splitter.split(features, target, frame[GROUP_COL])
     elif split_name == "group_province":
         splitter = GroupKFold(n_splits=n_splits)
-        split_iter = splitter.split(features, target, frame["PROVINCE"])
+        split_iter = splitter.split(features, target, frame[PROVINCE_COL])
     else:
         raise ValueError(f"Unsupported split name: {split_name}")
 

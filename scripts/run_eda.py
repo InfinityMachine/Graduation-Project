@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from pm25_geopfnmix.data import load_dataset
-from pm25_geopfnmix.settings import FIGURES_DIR, TABLES_DIR, TARGET_COL, ensure_directories
+from pm25_geopfnmix.settings import COUNTRY_COL, FIGURES_DIR, TABLES_DIR, TARGET_COL, ensure_directories
 from pm25_geopfnmix.visualization import (
     save_feature_vs_target,
     save_group_size_distribution,
@@ -21,6 +21,7 @@ def main() -> None:
         "shape": list(frame.shape),
         "missing": frame.isna().sum().to_dict(),
         "duplicate_rows": int(frame.duplicated().sum()),
+        "country_count": int(frame[COUNTRY_COL].nunique()),
         "province_count": int(frame["PROVINCE"].nunique()),
         "city_count": int(frame["CITY"].nunique()),
         "target_mean": float(frame[TARGET_COL].mean()),

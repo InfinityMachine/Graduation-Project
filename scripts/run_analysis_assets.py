@@ -201,9 +201,13 @@ def save_province_error(frame: pd.DataFrame) -> None:
         .sort_values("abs_error", ascending=False)
     )
     plot_frame["province_en"] = _to_province_english(plot_frame["PROVINCE"])
+    if len(plot_frame) > 40:
+        plot_frame_for_chart = pd.concat([plot_frame.head(20), plot_frame.tail(20)], ignore_index=True)
+    else:
+        plot_frame_for_chart = plot_frame
     fig, ax = plt.subplots(figsize=(10, 11))
     sns.barplot(
-        data=plot_frame,
+        data=plot_frame_for_chart,
         x="abs_error",
         y="province_en",
         hue="province_en",
@@ -213,7 +217,7 @@ def save_province_error(frame: pd.DataFrame) -> None:
     )
     ax.set_xlabel("Mean Absolute Error")
     ax.set_ylabel("")
-    ax.set_title(f"Province-Level Error of {model_label}")
+    ax.set_title(f"Province/State-Level Error of {model_label}")
     fig.tight_layout()
     fig.savefig(FIGURES_DIR / "province_level_mae.png", dpi=200)
     plt.close(fig)
@@ -317,7 +321,7 @@ def main() -> None:
     geopfnmix_candidates = ablation_rmse[ablation_rmse["model_name"].str.startswith("geopfnmix")].copy()
     best_model_name = geopfnmix_candidates.sort_values("mean").iloc[0]["model_name"]
     best_model_label = MODEL_LABELS.get(best_model_name, best_model_name)
-    best_global_expert = "catboost" if best_model_name == "geopfnmix_catboost" else "rf"
+    best_global_expert = "catboost" if "catboost" in str(best_model_name) else "rf"
 
     dataset = load_dataset()
     prediction_frame = pd.read_csv(TABLES_DIR / f"group_city_{best_model_name}_oof.csv")
