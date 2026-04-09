@@ -1,47 +1,52 @@
-# 县域农业数据 PM2.5 预测项目
+# 多源农业数据 PM2.5 预测项目
 
-本项目围绕 `data.csv` 中的县域农业与环境表格数据，构建一个面向本科毕业设计的 `PM2.5` 浓度预测研究仓库。仓库包含完整的数据审计、特征工程、基线实验、GeoPFNMix 融合模型、图表生成、实验日志、项目日记和论文草稿。
+本项目围绕 `data/` 目录中的多源农业与环境表格数据，构建一个面向本科毕业设计的 `PM2.5` 浓度预测研究仓库。仓库包含完整的数据审计、字段标准化、特征工程、基线实验、GeoPFNMix 融合模型、图表生成、实验日志、项目日记和论文终稿。
 
 ## 研究目标
 
-- 预测对象：县域尺度 `PM2.5`
+- 预测对象：区域尺度 `PM2.5`
 - 任务类型：表格回归
-- 核心难点：中小样本、强地理层级、随机划分导致地理泄漏、跨区域泛化困难
+- 核心难点：多源口径不一致、强地理层级、随机划分导致地理泄漏、跨区域泛化困难
 - 主评估协议：`GroupKFold(CITY)`
 
-项目不是单纯在随机划分上追求高分，而是强调“在未见过的城市上，模型还能否保持稳定预测能力”。
+这里的 `CITY` 是统一后的二级地理组字段。项目不是单纯在随机划分上追求高分，而是强调“在未见过的地理组上，模型还能否保持稳定预测能力”。
 
 ## 当前仓库中的主要结论
 
-以下结果来自仓库当前可复现脚本在本地环境中的最新运行产物：
+以下结果来自仓库当前 `artifacts/` 中的最新正式运行产物，即 Colab A100 GPU 重跑后同步回本地仓库的结果：
 
 - 随机划分下最优单模型：`TabPFN`
-  - `RMSE = 9.3250`
-  - `MAE = 6.5747`
-  - `R² = 0.5261`
-- 主协议 `GroupKFold(CITY)` 下最优单模型：`TabPFN`
-  - `RMSE = 12.5009`
-  - `MAE = 9.6614`
-  - `R² = 0.1415`
-- 当前最优融合模型：`GeoPFNMix-Lite-TabPFN`
-  - `RMSE = 12.4848`
-  - `MAE = 9.4729`
-  - `R² = 0.1442`
-- 相对单模型 `TabPFN`，`GeoPFNMix-Lite-TabPFN` 在主协议下：
-  - `RMSE` 降低 `0.13%`
-  - `MAE` 降低 `1.95%`
-  - Wilcoxon 配对检验 `p = 9.89e-06`
+  - `RMSE = 4.8426`
+  - `MAE = 2.1188`
+  - `R² = 0.8425`
+- 主协议 `GroupKFold(CITY)` 下最优单模型：`CatBoost`
+  - `RMSE = 6.0109`
+  - `MAE = 3.2069`
+  - `R² = 0.7542`
+- 更严格的 `GroupKFold(PROVINCE)` 下最优单模型：`CatBoost`
+  - `RMSE = 6.8052`
+  - `MAE = 4.5704`
+  - `R² = 0.6820`
+- 当前最优融合模型：`GeoPFNMix-CatBoost-TabPFN`
+  - `RMSE = 5.9342`
+  - `MAE = 3.1168`
+  - `R² = 0.7612`
+- 相对单模型 `CatBoost`，`GeoPFNMix-CatBoost-TabPFN` 在主协议下：
+  - `RMSE` 降低 `1.28%`
+  - `MAE` 降低 `2.81%`
+  - Wilcoxon 配对检验 `p = 4.72e-13`
 - 在不使用 `TabPFN` 先验时，当前最强可执行融合配置为 `GeoPFNMix-CatBoost`
-  - `RMSE = 12.5200`
-  - `MAE = 9.7104`
-  - `R² = 0.1390`
+  - `RMSE = 5.9488`
+  - `MAE = 3.1088`
+  - `R² = 0.7598`
+- `GeoPFNMix-Lite` 与 `GeoPFNMix-Lite-TabPFN` 仍保留为重要的 RF 骨干对照配置，用于验证复杂度控制和先验吸收能力。
 
-与随机划分相比，`TabPFN` 在 `GroupKFold(CITY)` 下的 RMSE 上升约 `34.06%`，说明地理泄漏确实显著存在；也说明本项目的主结论不是“随机划分高分”，而是“严格地理协议下谁更稳健”。
+与随机划分相比，最佳单模型在 `GroupKFold(CITY)` 下的 RMSE 上升约 `24.13%`，在 `GroupKFold(PROVINCE)` 下上升约 `40.53%`，说明地理泄漏确实显著存在；也说明本项目的主结论不是“随机划分高分”，而是“严格地理协议下谁更稳健”。
 
 ## 仓库结构
 
-- `data.csv`
-  - 原始数据文件，包含省、市、县三级地理字段与数值特征
+- `data/`
+  - 多源原始数据目录，当前包含 `Australia.csv`、`Brazil.xlsx`、`China.xlsx`、`EU.xlsx`、`USA.xlsx`
 - `src/pm25_geopfnmix/`
   - 核心 Python 包
 - `scripts/run_eda.py`
@@ -60,15 +65,15 @@
   - 实验记录
 - `reports/项目日记.md`
   - 项目决策与推进记录
-- `paper/毕业论文初稿.md`
-  - 论文草稿
+- `paper/毕业论文终稿.md`
+  - 当前论文提交版
 
 ## 数据字段说明
 
-原始数据共 13 列：
+标准化后的建模数据共 14 列：
 
 - 标识列：`OBJECTID_1`
-- 类别列：`PROVINCE`、`CITY`、`COUNTY`
+- 类别列：`COUNTRY`、`PROVINCE`、`CITY`、`COUNTY`
 - 数值列：`AET`、`ppt`、`tem`、`wind`、`NOX`、`SO2`、`fertilzier`、`manure`
 - 目标列：`PM2.5`
 
@@ -76,9 +81,9 @@
 
 - `OBJECTID_1` 不进入模型
 - `COUNTY` 不作为主类别特征参与编码
-- 主要类别特征只保留 `PROVINCE` 和 `CITY`
+- 主要类别特征保留 `COUNTRY`、`PROVINCE` 和 `CITY`
 
-这样做是为了降低“县级近唯一标识”带来的伪记忆问题。
+这样做是为了在保留跨域来源信息的同时，降低“最细粒度地理 ID”带来的伪记忆问题。
 
 ## 安装方式
 
@@ -96,20 +101,22 @@ python -m pip install -e .
 
 ```bash
 python scripts/run_eda.py
-python scripts/run_baselines.py
-python scripts/run_geopfnmix.py
+python scripts/run_baselines.py --device auto
+python scripts/run_geopfnmix.py --device auto
 python scripts/run_analysis_assets.py
 ```
 
 各脚本作用如下：
 
 1. `run_eda.py`
-   - 输出数据审计摘要、描述统计、目标分布图、数值相关图、城市组大小分布图
+   - 输出数据审计摘要、描述统计、目标分布图、数值相关图、二级地理组大小分布图
 2. `run_baselines.py`
-   - 跑 `Ridge`、`RandomForest`、`HistGBDT`、`XGBoost`、`LightGBM`、`CatBoost`、`TabPFN`
-   - 在 `RandomKFold`、`GroupKFold(CITY)`、`GroupKFold(PROVINCE)` 三套协议下输出结果
+  - 跑 `Ridge`、`RandomForest`、`HistGBDT`、`XGBoost`、`LightGBM`、`CatBoost`、`TabPFN`
+  - 在 `RandomKFold`、`GroupKFold(CITY)`、`GroupKFold(PROVINCE)` 三套协议下输出结果
+  - 支持 `--device auto/cpu/gpu`
 3. `run_geopfnmix.py`
-   - 运行 GeoPFNMix 家族模型与显著性检验
+  - 运行 GeoPFNMix 家族模型与显著性检验
+  - 支持 `--device auto/cpu/gpu`
 4. `run_analysis_assets.py`
    - 读取前面脚本生成的表格，自动绘制论文图表和补充分析表
 
@@ -166,7 +173,7 @@ print(dataset.target.name)
 ```python
 from pm25_geopfnmix.models import make_model
 
-model = make_model("geopfnmix_no_residual_tabpfn")
+model = make_model("geopfnmix_catboost_tabpfn", device_preference="auto")
 model.fit(dataset.features, dataset.target)
 pred = model.predict(dataset.features.head(10))
 ```
@@ -256,7 +263,7 @@ GeoPFNMix 家族模型遵循统一结构：
 4. 异构先验专家
    - 当前默认可执行先验为 `LightGBM`
    - 若提供 `HF_TOKEN` 与 `TABPFN_TOKEN`，可启用 `TabPFN`
-   - 本仓库会优先从根目录 `token.py` 中导入本地令牌
+   - 本仓库会优先从根目录 `HF_token.py` 中导入本地令牌
 5. 轻量 stacking
    - 使用低容量线性模型融合多路专家输出
 
@@ -265,13 +272,13 @@ GeoPFNMix 家族模型遵循统一结构：
 如果你已经完成 `TabPFN` 无人值守授权，建议优先使用：
 
 ```python
-model = make_model("geopfnmix_no_residual_tabpfn")
+model = make_model("geopfnmix_catboost_tabpfn", device_preference="gpu")
 ```
 
 它对应：
 
-- 全局专家：`RF`
-- 残差分支：关闭
+- 全局专家：`CatBoost`
+- 残差分支：开启
 - 先验专家：`TabPFN`
 - 融合器：线性 stacking
 
@@ -285,10 +292,10 @@ model = make_model("geopfnmix_catboost")
 
 - 全局专家：`CatBoost`
 - 残差分支：开启
-- 先验专家：开启
+- 先验专家：`LightGBM`
 - 融合器：线性 stacking
 
-如果你想要更简洁的对照配置，可以使用：
+如果你想要更简洁的 RF 骨干对照配置，可以使用：
 
 ```python
 model = make_model("geopfnmix_no_residual")
@@ -300,11 +307,13 @@ model = make_model("geopfnmix_no_residual")
 
 本仓库当前已经支持 `TabPFN` 的无人值守执行，策略如下：
 
-- 根目录允许放置一个本地私有 `token.py`
+- 根目录允许放置一个本地私有 `HF_token.py`
   - 可提供 `HF_TOKEN`
   - 也可同时提供 `TABPFN_TOKEN`
-- `token.py` 已加入 `.gitignore`
+- `HF_token.py` 已加入 `.gitignore`
   - 不会被默认提交到 Git
+- 代码仍兼容早期 `token.py`
+  - 但推荐统一迁移到 `HF_token.py`
 - 如果只有 `HF_TOKEN`
   - 可以通过 Hugging Face 完成基础认证
   - 但 `TabPFN` 头less 推理仍可能不可用
@@ -318,7 +327,7 @@ model = make_model("geopfnmix_no_residual")
 
 额外说明：
 
-- 由于仓库根目录存在 `token.py`，在仓库根目录直接执行某些 `python -` 或 `python -c` 临时探针时，可能会与 Python 标准库同名模块 `token` 发生遮蔽
+- 正是为了避免与 Python 标准库 `token` 同名冲突，推荐使用 `HF_token.py`
 - 日常复现实验请优先使用 `python scripts/run_*.py`
 - 如果必须写临时探针，建议显式清理 `sys.path` 中的仓库根目录后再导入标准库相关模块
 
@@ -326,11 +335,11 @@ model = make_model("geopfnmix_no_residual")
 
 - 结果会受到 Python 版本、库版本和运行平台的影响
 - `reports/实验日志.md` 中保留了项目早期环境记录和当前本地重跑记录
-- 当前仓库中的图表、表格和论文草稿，建议一律以 `artifacts/` 中最新文件为准
+- 当前仓库中的图表、表格和论文文稿，建议一律以 `artifacts/` 中最新文件为准
 
 ## 论文与文档对应关系
 
-- 论文正文：`paper/毕业论文初稿.md`
+- 论文正文：`paper/毕业论文终稿.md`
 - 实验日志：`reports/实验日志.md`
 - 决策与推进记录：`reports/项目日记.md`
 - 项目阶段性评估：`reports/项目瓶颈、困难与改进方向分析.md`
