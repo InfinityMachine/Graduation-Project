@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import warnings
 
@@ -11,10 +12,24 @@ from pm25_geopfnmix.models import make_model
 from pm25_geopfnmix.settings import TABLES_DIR, ensure_directories
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run baseline experiments.")
+    parser.add_argument(
+        "--device",
+        default="auto",
+        choices=["auto", "cpu", "gpu", "AUTO", "CPU", "GPU"],
+        help="Device preference for GPU-capable components.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    device_preference = args.device.lower()
     warnings.filterwarnings("ignore")
     ensure_directories()
     dataset = load_dataset()
+    print(f"[config] device_preference={device_preference}", flush=True)
     baseline_names = ["ridge", "rf", "hgbt", "xgboost", "lightgbm", "catboost"]
     split_names = ["random_kfold", "group_city", "group_province"]
 
@@ -27,7 +42,10 @@ def main() -> None:
                 result = evaluate_cv(
                     dataset=dataset,
                     model_name=model_name,
-                    model_factory=lambda model_name=model_name: make_model(model_name),
+                    model_factory=lambda model_name=model_name: make_model(
+                        model_name,
+                        device_preference=device_preference,
+                    ),
                     split_name=split_name,
                 )
             except Exception as exc:

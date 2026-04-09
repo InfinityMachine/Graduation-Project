@@ -39,6 +39,20 @@ class BaseRawRegressor:
         raise NotImplementedError
 
 
+def _normalize_device_preference(device_preference: str | None) -> str:
+    normalized = (device_preference or "auto").strip().lower()
+    if normalized not in {"auto", "cpu", "gpu"}:
+        raise ValueError(f"Unsupported device preference: {device_preference}")
+    return normalized
+
+
+def _use_gpu(device_preference: str | None) -> bool:
+    normalized = _normalize_device_preference(device_preference)
+    if normalized == "cpu":
+        return False
+    return bool(torch is not None and torch.cuda.is_available())
+
+
 def _split_feature_columns(frame: pd.DataFrame) -> tuple[list[str], list[str]]:
     cat_cols = [col for col in CAT_COLS if col in frame.columns]
     num_cols = [col for col in frame.columns if col not in cat_cols]
@@ -46,8 +60,9 @@ def _split_feature_columns(frame: pd.DataFrame) -> tuple[list[str], list[str]]:
 
 
 class SklearnTableRegressor(BaseRawRegressor):
-    def __init__(self, model_name: str) -> None:
+    def __init__(self, model_name: str, *, device_preference: str = "auto") -> None:
         self.model_name = model_name
+        self.device_preference = _normalize_device_preference(device_preference)
         self.feature_engineer = FeatureEngineer()
         self.pipeline: Pipeline | None = None
         self.prediction_clip_: tuple[float, float] | None = None
@@ -147,6 +162,7 @@ class SklearnTableRegressor(BaseRawRegressor):
                 reg_lambda=1.0,
                 objective="reg:squarederror",
                 tree_method="hist",
+                device="cuda" if _use_gpu(self.device_preference) else "cpu",
                 n_jobs=12,
                 random_state=RANDOM_STATE,
             )
@@ -174,19 +190,23 @@ class SklearnTableRegressor(BaseRawRegressor):
 
 
 class CatBoostTableRegressor(BaseRawRegressor):
-    def __init__(self) -> None:
+    def __init__(self, *, device_preference: str = "auto") -> None:
+        self.device_preference = _normalize_device_preference(device_preference)
         self.feature_engineer = FeatureEngineer()
-        self.model = CatBoostRegressor(
-            loss_function="RMSE",
-            eval_metric="RMSE",
-            iterations=900,
-            depth=6,
-            learning_rate=0.03,
-            l2_leaf_reg=6.0,
-            random_seed=RANDOM_STATE,
-            allow_writing_files=False,
-            verbose=False,
-        )
+        catboost_kwargs = {
+            "loss_function": "RMSE",
+            "eval_metric": "RMSE",
+            "iterations": 900,
+            "depth": 6,
+            "learning_rate": 0.03,
+            "l2_leaf_reg": 6.0,
+            "random_seed": RANDOM_STATE,
+            "allow_writing_files": False,
+            "verbose": False,
+        }
+        if _use_gpu(self.device_preference):
+            catboost_kwargs.update({"task_type": "GPU", "devices": "0"})
+        self.model = CatBoostRegressor(**catboost_kwargs)
 
     def fit(self, frame: pd.DataFrame, target: pd.Series) -> "CatBoostTableRegressor":
         engineered = self.feature_engineer.fit_transform(frame)
@@ -199,7 +219,7 @@ class CatBoostTableRegressor(BaseRawRegressor):
 
 
 class OptionalTabPFNRegressorWrapper(BaseRawRegressor):
-    def __init__(self) -> None:
+    def __init__(self, *, device_preference: str = "auto") -> None:
         if TabPFNRegressor is None:
             raise RuntimeError("tabpfn is not importable in the current environment.")
         prime_auth_tokens()
@@ -214,7 +234,8 @@ class OptionalTabPFNRegressorWrapper(BaseRawRegressor):
         self.feature_engineer = FeatureEngineer()
         self.preprocessor: ColumnTransformer | None = None
         self.model: TabPFNRegressor | None = None
-        self.device = "cuda" if torch is not None and torch.cuda.is_available() else "cpu"
+        self.device_preference = _normalize_device_preference(device_preference)
+        self.device = "cuda" if _use_gpu(self.device_preference) else "cpu"
 
     def fit(self, frame: pd.DataFrame, target: pd.Series) -> "OptionalTabPFNRegressorWrapper":
         engineered = self.feature_engineer.fit_transform(frame)
@@ -310,12 +331,14 @@ class GeoPFNMixRegressor(BaseRawRegressor):
         use_residual_branch: bool = True,
         use_prior_branch: bool = True,
         inner_splits: int = 3,
+        device_preference: str = "auto",
     ) -> None:
         self.global_model_name = global_model_name
         self.default_prior_model_name = prior_model_name
         self.use_residual_branch = use_residual_branch
         self.use_prior_branch = use_prior_branch
         self.inner_splits = inner_splits
+        self.device_preference = _normalize_device_preference(device_preference)
         self.global_model = self._make_global_model()
         self.prior_model_name: str | None = None
         self.prior_model: BaseRawRegressor | None = None
@@ -341,7 +364,10 @@ class GeoPFNMixRegressor(BaseRawRegressor):
             except Exception:
                 if self.prior_model_name == "tabpfn":
                     self.prior_model_name = "lightgbm"
-                    self.prior_model = SklearnTableRegressor("lightgbm")
+                    self.prior_model = SklearnTableRegressor(
+                        "lightgbm",
+                        device_preference=self.device_preference,
+                    )
                     self.prior_model.fit(frame, target)
                 else:
                     raise
@@ -378,7 +404,10 @@ class GeoPFNMixRegressor(BaseRawRegressor):
             except Exception:
                 if self.prior_model_name == "tabpfn":
                     self.prior_model_name = "lightgbm"
-                    fold_prior = SklearnTableRegressor("lightgbm")
+                    fold_prior = SklearnTableRegressor(
+                        "lightgbm",
+                        device_preference=self.device_preference,
+                    )
                     fold_prior.fit(train_frame, train_target)
                 else:
                     raise
@@ -472,49 +501,78 @@ class GeoPFNMixRegressor(BaseRawRegressor):
 
         if chosen == "tabpfn":
             try:
-                return OptionalTabPFNRegressorWrapper()
+                return OptionalTabPFNRegressorWrapper(device_preference=self.device_preference)
             except RuntimeError:
                 self.prior_model_name = "lightgbm"
-                return SklearnTableRegressor("lightgbm")
+                return SklearnTableRegressor(
+                    "lightgbm",
+                    device_preference=self.device_preference,
+                )
         if chosen == "lightgbm":
-            return SklearnTableRegressor("lightgbm")
+            return SklearnTableRegressor(
+                "lightgbm",
+                device_preference=self.device_preference,
+            )
         raise ValueError(f"Unsupported prior model: {chosen}")
 
     def _make_global_model(self) -> BaseRawRegressor:
         if self.global_model_name == "catboost":
-            return CatBoostTableRegressor()
+            return CatBoostTableRegressor(device_preference=self.device_preference)
         if self.global_model_name in {"rf", "lightgbm", "xgboost", "hgbt", "ridge"}:
-            return SklearnTableRegressor(self.global_model_name)
+            return SklearnTableRegressor(
+                self.global_model_name,
+                device_preference=self.device_preference,
+            )
         raise ValueError(f"Unsupported global model: {self.global_model_name}")
 
 
-def make_model(model_name: str) -> BaseRawRegressor:
+def make_model(model_name: str, *, device_preference: str = "auto") -> BaseRawRegressor:
     if model_name == "catboost":
-        return CatBoostTableRegressor()
+        return CatBoostTableRegressor(device_preference=device_preference)
     if model_name in {"ridge", "rf", "hgbt", "lightgbm", "xgboost"}:
-        return SklearnTableRegressor(model_name)
+        return SklearnTableRegressor(model_name, device_preference=device_preference)
     if model_name == "geopfnmix":
-        return GeoPFNMixRegressor(prior_model_name="lightgbm")
+        return GeoPFNMixRegressor(
+            prior_model_name="lightgbm",
+            device_preference=device_preference,
+        )
     if model_name == "geopfnmix_catboost":
-        return GeoPFNMixRegressor(global_model_name="catboost", prior_model_name="lightgbm")
+        return GeoPFNMixRegressor(
+            global_model_name="catboost",
+            prior_model_name="lightgbm",
+            device_preference=device_preference,
+        )
     if model_name == "geopfnmix_no_residual":
         return GeoPFNMixRegressor(
             prior_model_name="lightgbm",
             use_residual_branch=False,
             use_prior_branch=True,
+            device_preference=device_preference,
         )
     if model_name == "geopfnmix_tabpfn":
-        return GeoPFNMixRegressor(prior_model_name="tabpfn")
+        return GeoPFNMixRegressor(
+            prior_model_name="tabpfn",
+            device_preference=device_preference,
+        )
     if model_name == "geopfnmix_catboost_tabpfn":
-        return GeoPFNMixRegressor(global_model_name="catboost", prior_model_name="tabpfn")
+        return GeoPFNMixRegressor(
+            global_model_name="catboost",
+            prior_model_name="tabpfn",
+            device_preference=device_preference,
+        )
     if model_name == "geopfnmix_no_residual_tabpfn":
         return GeoPFNMixRegressor(
             prior_model_name="tabpfn",
             use_residual_branch=False,
             use_prior_branch=True,
+            device_preference=device_preference,
         )
     if model_name == "geopfnmix_no_prior":
-        return GeoPFNMixRegressor(use_residual_branch=True, use_prior_branch=False)
+        return GeoPFNMixRegressor(
+            use_residual_branch=True,
+            use_prior_branch=False,
+            device_preference=device_preference,
+        )
     if model_name == "tabpfn":
-        return OptionalTabPFNRegressorWrapper()
+        return OptionalTabPFNRegressorWrapper(device_preference=device_preference)
     raise ValueError(f"Unknown model name: {model_name}")
