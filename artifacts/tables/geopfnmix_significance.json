@@ -3,96 +3,96 @@
     "comparison": "rf_vs_geopfnmix_lite",
     "reference_model": "rf",
     "challenger_model": "geopfnmix_no_residual",
-    "wilcoxon_statistic": 1576898.0,
-    "p_value": 8.599799051647065e-08,
-    "n": 2676
+    "wilcoxon_statistic": 19524464.0,
+    "p_value": 0.0,
+    "n": 12445
   },
   "rf_vs_geopfnmix_full": {
     "comparison": "rf_vs_geopfnmix_full",
     "reference_model": "rf",
     "challenger_model": "geopfnmix",
-    "wilcoxon_statistic": 1596707.0,
-    "p_value": 1.1827710414720282e-06,
-    "n": 2676
+    "wilcoxon_statistic": 19533969.0,
+    "p_value": 0.0,
+    "n": 12445
   },
   "geopfnmix_lite_vs_full": {
     "comparison": "geopfnmix_lite_vs_full",
     "reference_model": "geopfnmix_no_residual",
     "challenger_model": "geopfnmix",
-    "wilcoxon_statistic": 1676816.0,
-    "p_value": 0.004311896060470196,
-    "n": 2676
+    "wilcoxon_statistic": 38716341.0,
+    "p_value": 0.987505699582974,
+    "n": 12445
   },
   "catboost_vs_geopfnmix_catboost": {
     "comparison": "catboost_vs_geopfnmix_catboost",
     "reference_model": "catboost",
     "challenger_model": "geopfnmix_catboost",
-    "wilcoxon_statistic": 1584901.0,
-    "p_value": 2.5518397163570976e-07,
-    "n": 2676
+    "wilcoxon_statistic": 34056956.0,
+    "p_value": 2.5540605340383715e-31,
+    "n": 12445
   },
   "geopfnmix_full_vs_geopfnmix_catboost": {
     "comparison": "geopfnmix_full_vs_geopfnmix_catboost",
     "reference_model": "geopfnmix",
     "challenger_model": "geopfnmix_catboost",
-    "wilcoxon_statistic": 1653312.0,
-    "p_value": 0.0005765767238736565,
-    "n": 2676
+    "wilcoxon_statistic": 26240878.0,
+    "p_value": 6.498491905674222e-213,
+    "n": 12445
   },
   "geopfnmix_full_lightgbm_vs_tabpfn": {
     "comparison": "geopfnmix_full_lightgbm_vs_tabpfn",
     "reference_model": "geopfnmix",
     "challenger_model": "geopfnmix_tabpfn",
-    "wilcoxon_statistic": 1477823.0,
-    "p_value": 4.776766422256515e-15,
-    "n": 2676
+    "wilcoxon_statistic": 38005986.0,
+    "p_value": 0.07377568955086496,
+    "n": 12445
   },
   "geopfnmix_lite_tabpfn_vs_full_tabpfn": {
     "comparison": "geopfnmix_lite_tabpfn_vs_full_tabpfn",
     "reference_model": "geopfnmix_no_residual_tabpfn",
     "challenger_model": "geopfnmix_tabpfn",
-    "wilcoxon_statistic": 1674979.0,
-    "p_value": 0.0037274484592647083,
-    "n": 2676
+    "wilcoxon_statistic": 36696656.0,
+    "p_value": 4.3086012741405196e-07,
+    "n": 12445
   },
   "geopfnmix_lite_lightgbm_vs_tabpfn": {
     "comparison": "geopfnmix_lite_lightgbm_vs_tabpfn",
     "reference_model": "geopfnmix_no_residual",
     "challenger_model": "geopfnmix_no_residual_tabpfn",
-    "wilcoxon_statistic": 1475088.0,
-    "p_value": 2.765049941654003e-15,
-    "n": 2676
+    "wilcoxon_statistic": 38086927.0,
+    "p_value": 0.11272718360316523,
+    "n": 12445
   },
   "geopfnmix_catboost_lightgbm_vs_tabpfn": {
     "comparison": "geopfnmix_catboost_lightgbm_vs_tabpfn",
     "reference_model": "geopfnmix_catboost",
     "challenger_model": "geopfnmix_catboost_tabpfn",
-    "wilcoxon_statistic": 1571595.0,
-    "p_value": 4.094291435230172e-08,
-    "n": 2676
+    "wilcoxon_statistic": 37730521.0,
+    "p_value": 0.01331281765765244,
+    "n": 12445
   },
   "tabpfn_vs_geopfnmix_lite_tabpfn": {
     "comparison": "tabpfn_vs_geopfnmix_lite_tabpfn",
     "reference_model": "tabpfn",
     "challenger_model": "geopfnmix_no_residual_tabpfn",
-    "wilcoxon_statistic": 1614251.0,
-    "p_value": 9.888405072794186e-06,
-    "n": 2676
+    "wilcoxon_statistic": 28431222.0,
+    "p_value": 2.1056046269106415e-145,
+    "n": 12445
   },
   "tabpfn_vs_geopfnmix_full_tabpfn": {
     "comparison": "tabpfn_vs_geopfnmix_full_tabpfn",
     "reference_model": "tabpfn",
     "challenger_model": "geopfnmix_tabpfn",
-    "wilcoxon_statistic": 1642310.0,
-    "p_value": 0.00020109252589135826,
-    "n": 2676
+    "wilcoxon_statistic": 28552225.0,
+    "p_value": 4.735469364462103e-142,
+    "n": 12445
   },
   "tabpfn_vs_geopfnmix_catboost_tabpfn": {
     "comparison": "tabpfn_vs_geopfnmix_catboost_tabpfn",
     "reference_model": "tabpfn",
     "challenger_model": "geopfnmix_catboost_tabpfn",
-    "wilcoxon_statistic": 1639263.0,
-    "p_value": 0.0001483187661358729,
-    "n": 2676
+    "wilcoxon_statistic": 22621424.0,
+    "p_value": 0.0,
+    "n": 12445
   }
 }
