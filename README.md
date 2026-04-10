@@ -28,18 +28,29 @@
   - `MAE = 4.5704`
   - `R² = 0.6820`
 - 当前最优融合模型：`GeoPFNMix-CatBoost-TabPFN`
-  - `RMSE = 5.9342`
-  - `MAE = 3.1168`
-  - `R² = 0.7612`
+  - `RMSE = 5.9175`
+  - `MAE = 3.1056`
+  - `R² = 0.7625`
 - 相对单模型 `CatBoost`，`GeoPFNMix-CatBoost-TabPFN` 在主协议下：
-  - `RMSE` 降低 `1.28%`
-  - `MAE` 降低 `2.81%`
-  - Wilcoxon 配对检验 `p = 4.72e-13`
+  - `RMSE` 降低 `1.55%`
+  - `MAE` 降低 `3.16%`
+  - Wilcoxon 配对检验 `p = 1.15e-21`
 - 在不使用 `TabPFN` 先验时，当前最强可执行融合配置为 `GeoPFNMix-CatBoost`
-  - `RMSE = 5.9488`
-  - `MAE = 3.1088`
-  - `R² = 0.7598`
+  - `RMSE = 5.9537`
+  - `MAE = 3.1112`
+  - `R² = 0.7595`
+- 新增补充变体 `GeoPFNMix-Lite-CatBoost`
+  - `RMSE = 5.9564`
+  - `MAE = 3.1236`
+  - `R² = 0.7591`
 - `GeoPFNMix-Lite` 与 `GeoPFNMix-Lite-TabPFN` 仍保留为重要的 RF 骨干对照配置，用于验证复杂度控制和先验吸收能力。
+
+仓库脚本目前还已经接入两个待进一步重跑确认的补充口径：
+
+- `GeoPFNMix-Lite-CatBoost-TabPFN`
+- “当前最优两个 GeoPFNMix 家族模型 + CatBoost + TabPFN”的按数据源拆分对照分析
+
+需要补充说明的是：在本轮正式重跑中，`GeoPFNMix-CatBoost-TabPFN` 仍然取得最佳均值结果，但它相对 `GeoPFNMix-CatBoost` 的额外优势未达到统计显著。因此，更稳妥的结论是：当前最强的是“CatBoost 骨干的 GeoPFNMix 家族”，而 `TabPFN` 先验是否稳定优于 `LightGBM` 先验，仍需要结合后续更多重跑与外部验证判断。
 
 与随机划分相比，最佳单模型在 `GroupKFold(CITY)` 下的 RMSE 上升约 `24.13%`，在 `GroupKFold(PROVINCE)` 下上升约 `40.53%`，说明地理泄漏确实显著存在；也说明本项目的主结论不是“随机划分高分”，而是“严格地理协议下谁更稳健”。
 
@@ -56,7 +67,7 @@
 - `scripts/run_geopfnmix.py`
   - 运行 GeoPFNMix 家族模型、补充变体、消融实验和显著性检验
 - `scripts/run_analysis_assets.py`
-  - 基于实验结果生成论文用图表、分析表以及最佳模型按数据源拆分表现
+  - 基于实验结果生成论文用图表、分析表、最佳模型按数据源拆分表现，以及“最优两个 GeoPFNMix 模型 + CatBoost + TabPFN”的来源对照
 - `artifacts/figures/`
   - 自动生成的图像输出
 - `artifacts/tables/`
@@ -116,10 +127,10 @@ python scripts/run_analysis_assets.py
   - 支持 `--device auto/cpu/gpu`
 3. `run_geopfnmix.py`
   - 运行 GeoPFNMix 家族模型与显著性检验
-  - 当前也包含补充变体 `GeoPFNMix-Lite-CatBoost`
+  - 当前也包含补充变体 `GeoPFNMix-Lite-CatBoost` 与 `GeoPFNMix-Lite-CatBoost-TabPFN`
   - 支持 `--device auto/cpu/gpu`
 4. `run_analysis_assets.py`
-   - 读取前面脚本生成的表格，自动绘制论文图表、补充分析表和最佳模型按数据源拆分的表现
+   - 读取前面脚本生成的表格，自动绘制论文图表、补充分析表、最佳模型按数据源拆分表现，以及“最优两个 GeoPFNMix 模型 + CatBoost + TabPFN”的按来源对照
 
 ## 主要输出文件
 
@@ -143,6 +154,8 @@ python scripts/run_analysis_assets.py
 - `artifacts/figures/best_geopfnmix_scatter.png`
 - `artifacts/figures/best_model_country_metrics.png`
 - `artifacts/tables/best_model_country_metrics.csv`
+- `artifacts/figures/selected_models_country_metrics.png`
+- `artifacts/tables/selected_models_country_metrics.csv`
 - `artifacts/figures/geopfnmix_error_by_target_bin.png`
 - `artifacts/tables/geopfnmix_error_by_target_bin.csv`
 - `artifacts/figures/province_level_mae.png`
@@ -193,6 +206,7 @@ pred = model.predict(dataset.features.head(10))
 - `geopfnmix_no_prior`
 - `geopfnmix_no_residual`
 - `geopfnmix_lite_catboost`
+- `geopfnmix_lite_catboost_tabpfn`
 - `geopfnmix_no_residual_tabpfn`
 - `geopfnmix`
 - `geopfnmix_tabpfn`

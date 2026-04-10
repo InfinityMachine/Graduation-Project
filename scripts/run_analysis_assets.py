@@ -60,6 +60,7 @@ MODEL_LABELS = {
     "geopfnmix_no_prior": "GeoPFNMix-no-prior",
     "geopfnmix_no_residual": "GeoPFNMix-Lite",
     "geopfnmix_lite_catboost": "GeoPFNMix-Lite-CatBoost",
+    "geopfnmix_lite_catboost_tabpfn": "GeoPFNMix-Lite-CatBoost-TabPFN",
     "geopfnmix_no_residual_tabpfn": "GeoPFNMix-Lite-TabPFN",
     "geopfnmix": "GeoPFNMix",
     "geopfnmix_catboost": "GeoPFNMix-CatBoost",
@@ -71,6 +72,8 @@ SPLIT_LABELS = {
     "group_city": "GroupKFold(CITY)",
     "group_province": "GroupKFold(PROVINCE)",
 }
+
+PREFERRED_COUNTRY_ORDER = ["Australia", "Brazil", "China", "EU", "USA"]
 
 
 def _clean_feature_name(name: str) -> str:
@@ -97,6 +100,49 @@ def _format_model_names(frame: pd.DataFrame, column: str = "model_name") -> pd.D
     out = frame.copy()
     out[column] = out[column].map(MODEL_LABELS).fillna(out[column])
     return out
+
+
+def _order_country_summary(summary: pd.DataFrame) -> pd.DataFrame:
+    extra_countries = [name for name in summary["country"].tolist() if name not in PREFERRED_COUNTRY_ORDER]
+    category_order = [name for name in PREFERRED_COUNTRY_ORDER if name in summary["country"].tolist()] + extra_countries
+    summary = summary.copy()
+    summary["country"] = pd.Categorical(summary["country"], categories=category_order, ordered=True)
+    return summary.sort_values("country").reset_index(drop=True)
+
+
+def _compute_country_metrics(
+    frame: pd.DataFrame,
+    *,
+    model_name: str | None = None,
+    model_label: str | None = None,
+) -> pd.DataFrame:
+    rows: list[dict[str, float | int | str]] = []
+    for country_name, group in frame.groupby("COUNTRY", sort=False):
+        metrics = compute_metrics(group["y_true"], group["y_pred"])
+        row: dict[str, float | int | str] = {
+            "country": country_name,
+            "sample_count": int(len(group)),
+            **metrics,
+        }
+        if model_name is not None:
+            row["model_name"] = model_name
+        if model_label is not None:
+            row["model_label"] = model_label
+        rows.append(row)
+
+    return _order_country_summary(pd.DataFrame(rows))
+
+
+def _load_prediction_frame(dataset, model_name: str) -> pd.DataFrame:
+    prediction_frame = pd.read_csv(TABLES_DIR / f"group_city_{model_name}_oof.csv")
+    prediction_frame = prediction_frame.merge(
+        dataset.frame.reset_index().rename(columns={"index": "row_id"})[["row_id", "COUNTRY", "PROVINCE"]],
+        on="row_id",
+        how="left",
+    )
+    prediction_frame["model_name"] = model_name
+    prediction_frame["model_label"] = MODEL_LABELS.get(model_name, model_name)
+    return prediction_frame
 
 
 def save_protocol_heatmap(summary: pd.DataFrame) -> None:
@@ -273,25 +319,7 @@ def save_error_by_target_bin(frame: pd.DataFrame) -> None:
 
 def save_country_breakdown(frame: pd.DataFrame) -> None:
     model_label = frame["model_label"].iloc[0]
-    preferred_order = ["Australia", "Brazil", "China", "EU", "USA"]
-    rows: list[dict[str, float | int | str]] = []
-    for country_name, group in frame.groupby("COUNTRY", sort=False):
-        metrics = compute_metrics(group["y_true"], group["y_pred"])
-        rows.append(
-            {
-                "country": country_name,
-                "sample_count": int(len(group)),
-                **metrics,
-            }
-        )
-
-    summary = pd.DataFrame(rows)
-    extra_countries = [
-        name for name in summary["country"].tolist() if name not in preferred_order
-    ]
-    category_order = [name for name in preferred_order if name in summary["country"].tolist()] + extra_countries
-    summary["country"] = pd.Categorical(summary["country"], categories=category_order, ordered=True)
-    summary = summary.sort_values("country").reset_index(drop=True)
+    summary = _compute_country_metrics(frame)
     summary.to_csv(TABLES_DIR / "best_model_country_metrics.csv", index=False)
 
     plot_frame = summary.melt(
@@ -328,6 +356,88 @@ def save_country_breakdown(frame: pd.DataFrame) -> None:
     fig.suptitle(f"{model_label} Performance by Data Source", y=1.02)
     fig.tight_layout()
     fig.savefig(FIGURES_DIR / "best_model_country_metrics.png", dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+
+def save_selected_models_country_breakdown(dataset, model_names: list[str]) -> None:
+    ordered_model_names: list[str] = []
+    for model_name in model_names:
+        if model_name not in ordered_model_names:
+            ordered_model_names.append(model_name)
+
+    summary_frames: list[pd.DataFrame] = []
+    model_label_order = [MODEL_LABELS.get(model_name, model_name) for model_name in ordered_model_names]
+
+    for model_name, model_label in zip(ordered_model_names, model_label_order):
+        prediction_frame = _load_prediction_frame(dataset, model_name)
+        summary_frames.append(
+            _compute_country_metrics(
+                prediction_frame,
+                model_name=model_name,
+                model_label=model_label,
+            )
+        )
+
+    combined = pd.concat(summary_frames, ignore_index=True)
+    extra_countries = [name for name in combined["country"].tolist() if name not in PREFERRED_COUNTRY_ORDER]
+    country_order = [name for name in PREFERRED_COUNTRY_ORDER if name in combined["country"].tolist()] + extra_countries
+    combined["country"] = pd.Categorical(
+        combined["country"],
+        categories=country_order,
+        ordered=True,
+    )
+    combined["model_label"] = pd.Categorical(
+        combined["model_label"],
+        categories=model_label_order,
+        ordered=True,
+    )
+    combined = combined.sort_values(["model_label", "country"]).reset_index(drop=True)
+    combined.to_csv(TABLES_DIR / "selected_models_country_metrics.csv", index=False)
+
+    sample_counts = (
+        combined.groupby("country", observed=False)["sample_count"]
+        .max()
+        .dropna()
+        .astype(int)
+        .to_dict()
+    )
+    country_order = [name for name in country_order if name in sample_counts]
+    country_labels = country_order
+
+    metric_specs = [
+        ("rmse", "RMSE", "YlGnBu", None),
+        ("mae", "MAE", "crest", None),
+        ("r2", "R²", "coolwarm", 0.0),
+    ]
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    for axis, (metric_name, metric_label, cmap, center) in zip(axes, metric_specs):
+        heatmap_frame = (
+            combined.pivot(index="model_label", columns="country", values=metric_name)
+            .reindex(index=model_label_order)
+            .reindex(columns=country_order)
+        )
+        sns.heatmap(
+            heatmap_frame,
+            annot=True,
+            fmt=".2f",
+            cmap=cmap,
+            center=center,
+            linewidths=0.5,
+            linecolor="white",
+            cbar=True,
+            ax=axis,
+        )
+        axis.set_title(f"{metric_label} by Data Source")
+        axis.set_xlabel("")
+        axis.set_ylabel("Model" if metric_name == "rmse" else "")
+        axis.set_xticklabels(country_labels, rotation=0)
+        axis.set_yticklabels(axis.get_yticklabels(), rotation=0)
+        if metric_name != "rmse":
+            axis.tick_params(axis="y", labelleft=False)
+
+    fig.suptitle("Selected Models Performance by Data Source", y=1.02)
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "selected_models_country_metrics.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -398,15 +508,13 @@ def main() -> None:
     best_global_expert = "catboost" if "catboost" in str(best_model_name) else "rf"
 
     dataset = load_dataset()
-    prediction_frame = pd.read_csv(TABLES_DIR / f"group_city_{best_model_name}_oof.csv")
-    prediction_frame = prediction_frame.merge(
-        dataset.frame.reset_index().rename(columns={"index": "row_id"})[["row_id", "COUNTRY", "PROVINCE"]],
-        on="row_id",
-        how="left",
-    )
+    prediction_frame = _load_prediction_frame(dataset, best_model_name)
     prediction_frame["model_label"] = best_model_label
+    selected_model_names = geopfnmix_candidates.sort_values("mean")["model_name"].drop_duplicates().head(2).tolist()
+    selected_model_names.extend(["catboost", "tabpfn"])
     save_prediction_scatter(prediction_frame)
     save_country_breakdown(prediction_frame)
+    save_selected_models_country_breakdown(dataset, selected_model_names)
     save_province_error(prediction_frame)
     save_error_by_target_bin(prediction_frame)
     save_shap_assets(best_global_expert)

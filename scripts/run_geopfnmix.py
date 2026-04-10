@@ -39,6 +39,7 @@ def main() -> None:
         "geopfnmix_no_residual",
         "geopfnmix_lite_catboost",
         "geopfnmix_no_residual_tabpfn",
+        "geopfnmix_lite_catboost_tabpfn",
         "geopfnmix",
         "geopfnmix_tabpfn",
         "geopfnmix_catboost",
@@ -82,6 +83,21 @@ def main() -> None:
             "geopfnmix_lite_catboost",
             "geopfnmix_catboost",
             "geopfnmix_lite_catboost_vs_geopfnmix_catboost",
+        ),
+        (
+            "catboost",
+            "geopfnmix_lite_catboost_tabpfn",
+            "catboost_vs_geopfnmix_lite_catboost_tabpfn",
+        ),
+        (
+            "geopfnmix_lite_catboost",
+            "geopfnmix_lite_catboost_tabpfn",
+            "geopfnmix_lite_catboost_lightgbm_vs_tabpfn",
+        ),
+        (
+            "geopfnmix_lite_catboost_tabpfn",
+            "geopfnmix_catboost_tabpfn",
+            "geopfnmix_lite_catboost_tabpfn_vs_geopfnmix_catboost_tabpfn",
         ),
         (
             "geopfnmix_no_residual",
@@ -128,6 +144,11 @@ def main() -> None:
             "tabpfn",
             "geopfnmix_catboost_tabpfn",
             "tabpfn_vs_geopfnmix_catboost_tabpfn",
+        ),
+        (
+            "tabpfn",
+            "geopfnmix_lite_catboost_tabpfn",
+            "tabpfn_vs_geopfnmix_lite_catboost_tabpfn",
         ),
     ]
     significance_rows: list[dict[str, str | float | int]] = []
