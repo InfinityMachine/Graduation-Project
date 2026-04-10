@@ -542,6 +542,14 @@ def make_model(model_name: str, *, device_preference: str = "auto") -> BaseRawRe
             prior_model_name="lightgbm",
             device_preference=device_preference,
         )
+    if model_name == "geopfnmix_lite_catboost":
+        return GeoPFNMixRegressor(
+            global_model_name="catboost",
+            prior_model_name="lightgbm",
+            use_residual_branch=False,
+            use_prior_branch=True,
+            device_preference=device_preference,
+        )
     if model_name == "geopfnmix_no_residual":
         return GeoPFNMixRegressor(
             prior_model_name="lightgbm",

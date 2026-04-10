@@ -94,5 +94,13 @@
     "wilcoxon_statistic": 22621424.0,
     "p_value": 0.0,
     "n": 12445
+  },
+  "catboost_vs_geopfnmix_catboost_tabpfn": {
+    "comparison": "catboost_vs_geopfnmix_catboost_tabpfn",
+    "reference_model": "catboost",
+    "challenger_model": "geopfnmix_catboost_tabpfn",
+    "wilcoxon_statistic": 35823626.0,
+    "p_value": 4.724059823986002e-13,
+    "n": 12445
   }
 }

@@ -9,6 +9,7 @@ import seaborn as sns
 import shap
 
 from pm25_geopfnmix.data import load_dataset
+from pm25_geopfnmix.evaluation import compute_metrics
 from pm25_geopfnmix.models import make_model
 from pm25_geopfnmix.settings import FIGURES_DIR, TABLES_DIR, ensure_directories
 
@@ -58,6 +59,7 @@ MODEL_LABELS = {
     "tabpfn": "TabPFN",
     "geopfnmix_no_prior": "GeoPFNMix-no-prior",
     "geopfnmix_no_residual": "GeoPFNMix-Lite",
+    "geopfnmix_lite_catboost": "GeoPFNMix-Lite-CatBoost",
     "geopfnmix_no_residual_tabpfn": "GeoPFNMix-Lite-TabPFN",
     "geopfnmix": "GeoPFNMix",
     "geopfnmix_catboost": "GeoPFNMix-CatBoost",
@@ -76,7 +78,19 @@ def _clean_feature_name(name: str) -> str:
 
 
 def _to_province_english(series: pd.Series) -> pd.Series:
-    return series.map(PROVINCE_LABELS).fillna(series)
+    def _translate(value: str) -> str:
+        if not isinstance(value, str):
+            return value
+        parts = value.split("::")
+        if not parts:
+            return value
+        last_part = parts[-1]
+        translated = PROVINCE_LABELS.get(last_part, last_part)
+        if len(parts) == 1:
+            return translated
+        return "::".join([*parts[:-1], translated])
+
+    return series.map(_translate)
 
 
 def _format_model_names(frame: pd.DataFrame, column: str = "model_name") -> pd.DataFrame:
@@ -257,6 +271,66 @@ def save_error_by_target_bin(frame: pd.DataFrame) -> None:
     summary.to_csv(TABLES_DIR / "geopfnmix_error_by_target_bin.csv", index=False)
 
 
+def save_country_breakdown(frame: pd.DataFrame) -> None:
+    model_label = frame["model_label"].iloc[0]
+    preferred_order = ["Australia", "Brazil", "China", "EU", "USA"]
+    rows: list[dict[str, float | int | str]] = []
+    for country_name, group in frame.groupby("COUNTRY", sort=False):
+        metrics = compute_metrics(group["y_true"], group["y_pred"])
+        rows.append(
+            {
+                "country": country_name,
+                "sample_count": int(len(group)),
+                **metrics,
+            }
+        )
+
+    summary = pd.DataFrame(rows)
+    extra_countries = [
+        name for name in summary["country"].tolist() if name not in preferred_order
+    ]
+    category_order = [name for name in preferred_order if name in summary["country"].tolist()] + extra_countries
+    summary["country"] = pd.Categorical(summary["country"], categories=category_order, ordered=True)
+    summary = summary.sort_values("country").reset_index(drop=True)
+    summary.to_csv(TABLES_DIR / "best_model_country_metrics.csv", index=False)
+
+    plot_frame = summary.melt(
+        id_vars=["country", "sample_count", "r2"],
+        value_vars=["rmse", "mae"],
+        var_name="metric",
+        value_name="value",
+    )
+    plot_frame["metric"] = plot_frame["metric"].str.upper()
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5.8), sharey=True)
+    for axis, metric_name in zip(axes, ["RMSE", "MAE"]):
+        metric_frame = plot_frame[plot_frame["metric"] == metric_name]
+        sns.barplot(
+            data=metric_frame,
+            x="value",
+            y="country",
+            hue="country",
+            palette="crest",
+            ax=axis,
+            legend=False,
+        )
+        axis.set_title(f"{metric_name} by Data Source")
+        axis.set_xlabel(metric_name)
+        axis.set_ylabel("" if metric_name == "MAE" else "Data Source")
+        for patch, (_, row) in zip(axis.patches, metric_frame.iterrows()):
+            axis.text(
+                patch.get_width() + 0.02,
+                patch.get_y() + patch.get_height() / 2,
+                f"n={int(row['sample_count'])}",
+                va="center",
+                fontsize=10,
+            )
+    fig.suptitle(f"{model_label} Performance by Data Source", y=1.02)
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "best_model_country_metrics.png", dpi=200, bbox_inches="tight")
+    plt.close(fig)
+
+
 def save_shap_assets(global_expert_name: str) -> None:
     dataset = load_dataset()
     model = make_model(global_expert_name)
@@ -326,12 +400,13 @@ def main() -> None:
     dataset = load_dataset()
     prediction_frame = pd.read_csv(TABLES_DIR / f"group_city_{best_model_name}_oof.csv")
     prediction_frame = prediction_frame.merge(
-        dataset.frame.reset_index().rename(columns={"index": "row_id"})[["row_id", "PROVINCE"]],
+        dataset.frame.reset_index().rename(columns={"index": "row_id"})[["row_id", "COUNTRY", "PROVINCE"]],
         on="row_id",
         how="left",
     )
     prediction_frame["model_label"] = best_model_label
     save_prediction_scatter(prediction_frame)
+    save_country_breakdown(prediction_frame)
     save_province_error(prediction_frame)
     save_error_by_target_bin(prediction_frame)
     save_shap_assets(best_global_expert)

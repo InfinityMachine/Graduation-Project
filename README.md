@@ -54,9 +54,9 @@
 - `scripts/run_baselines.py`
   - 跑通统一特征工程下的多组基线模型
 - `scripts/run_geopfnmix.py`
-  - 运行 GeoPFNMix 家族模型、消融实验和显著性检验
+  - 运行 GeoPFNMix 家族模型、补充变体、消融实验和显著性检验
 - `scripts/run_analysis_assets.py`
-  - 基于实验结果生成论文用图表与分析表
+  - 基于实验结果生成论文用图表、分析表以及最佳模型按数据源拆分表现
 - `artifacts/figures/`
   - 自动生成的图像输出
 - `artifacts/tables/`
@@ -116,9 +116,10 @@ python scripts/run_analysis_assets.py
   - 支持 `--device auto/cpu/gpu`
 3. `run_geopfnmix.py`
   - 运行 GeoPFNMix 家族模型与显著性检验
+  - 当前也包含补充变体 `GeoPFNMix-Lite-CatBoost`
   - 支持 `--device auto/cpu/gpu`
 4. `run_analysis_assets.py`
-   - 读取前面脚本生成的表格，自动绘制论文图表和补充分析表
+   - 读取前面脚本生成的表格，自动绘制论文图表、补充分析表和最佳模型按数据源拆分的表现
 
 ## 主要输出文件
 
@@ -140,6 +141,8 @@ python scripts/run_analysis_assets.py
 ### 误差分析与可解释性
 
 - `artifacts/figures/best_geopfnmix_scatter.png`
+- `artifacts/figures/best_model_country_metrics.png`
+- `artifacts/tables/best_model_country_metrics.csv`
 - `artifacts/figures/geopfnmix_error_by_target_bin.png`
 - `artifacts/tables/geopfnmix_error_by_target_bin.csv`
 - `artifacts/figures/province_level_mae.png`
@@ -189,6 +192,7 @@ pred = model.predict(dataset.features.head(10))
 - `tabpfn`
 - `geopfnmix_no_prior`
 - `geopfnmix_no_residual`
+- `geopfnmix_lite_catboost`
 - `geopfnmix_no_residual_tabpfn`
 - `geopfnmix`
 - `geopfnmix_tabpfn`
@@ -302,6 +306,21 @@ model = make_model("geopfnmix_no_residual")
 ```
 
 也就是论文中常提到的 `GeoPFNMix-Lite`。
+
+如果你想补测“保留 Lite 结构，但把全局专家从 `RF` 提升到 `CatBoost`”这一问题，可以使用：
+
+```python
+model = make_model("geopfnmix_lite_catboost")
+```
+
+它对应：
+
+- 全局专家：`CatBoost`
+- 残差分支：关闭
+- 先验专家：`LightGBM`
+- 融合器：线性 stacking
+
+这个补充变体主要用于回答：`Lite` 的收益究竟更多来自“低复杂度结构本身”，还是也会显著受益于更强全局专家。
 
 ## 无人值守运行注意事项
 

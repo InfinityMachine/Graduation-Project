@@ -37,6 +37,7 @@ def main() -> None:
         "tabpfn",
         "geopfnmix_no_prior",
         "geopfnmix_no_residual",
+        "geopfnmix_lite_catboost",
         "geopfnmix_no_residual_tabpfn",
         "geopfnmix",
         "geopfnmix_tabpfn",
@@ -72,6 +73,26 @@ def main() -> None:
         ("rf", "geopfnmix", "rf_vs_geopfnmix_full"),
         ("geopfnmix_no_residual", "geopfnmix", "geopfnmix_lite_vs_full"),
         ("catboost", "geopfnmix_catboost", "catboost_vs_geopfnmix_catboost"),
+        (
+            "catboost",
+            "geopfnmix_lite_catboost",
+            "catboost_vs_geopfnmix_lite_catboost",
+        ),
+        (
+            "geopfnmix_lite_catboost",
+            "geopfnmix_catboost",
+            "geopfnmix_lite_catboost_vs_geopfnmix_catboost",
+        ),
+        (
+            "geopfnmix_no_residual",
+            "geopfnmix_lite_catboost",
+            "geopfnmix_lite_rf_vs_lite_catboost",
+        ),
+        (
+            "catboost",
+            "geopfnmix_catboost_tabpfn",
+            "catboost_vs_geopfnmix_catboost_tabpfn",
+        ),
         ("geopfnmix", "geopfnmix_catboost", "geopfnmix_full_vs_geopfnmix_catboost"),
         (
             "geopfnmix",
