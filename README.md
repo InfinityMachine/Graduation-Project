@@ -28,29 +28,37 @@
   - `MAE = 4.5704`
   - `R² = 0.6820`
 - 当前最优融合模型：`GeoPFNMix-CatBoost-TabPFN`
-  - `RMSE = 5.9175`
-  - `MAE = 3.1056`
-  - `R² = 0.7625`
+  - `RMSE = 5.9225`
+  - `MAE = 3.1078`
+  - `R² = 0.7622`
 - 相对单模型 `CatBoost`，`GeoPFNMix-CatBoost-TabPFN` 在主协议下：
-  - `RMSE` 降低 `1.55%`
-  - `MAE` 降低 `3.16%`
-  - Wilcoxon 配对检验 `p = 1.15e-21`
+  - `RMSE` 降低 `1.47%`
+  - `MAE` 降低 `3.09%`
+  - Wilcoxon 配对检验 `p = 2.14e-21`
 - 在不使用 `TabPFN` 先验时，当前最强可执行融合配置为 `GeoPFNMix-CatBoost`
-  - `RMSE = 5.9537`
-  - `MAE = 3.1112`
-  - `R² = 0.7595`
+  - `RMSE = 5.9551`
+  - `MAE = 3.1092`
+  - `R² = 0.7593`
 - 新增补充变体 `GeoPFNMix-Lite-CatBoost`
-  - `RMSE = 5.9564`
-  - `MAE = 3.1236`
-  - `R² = 0.7591`
+  - `RMSE = 5.9526`
+  - `MAE = 3.1176`
+  - `R² = 0.7595`
+- 新增补充变体 `GeoPFNMix-Lite-CatBoost-TabPFN`
+  - `RMSE = 5.9281`
+  - `MAE = 3.1220`
+  - `R² = 0.7618`
+  - 当前为第二优融合配置
 - `GeoPFNMix-Lite` 与 `GeoPFNMix-Lite-TabPFN` 仍保留为重要的 RF 骨干对照配置，用于验证复杂度控制和先验吸收能力。
 
-仓库脚本目前还已经接入两个待进一步重跑确认的补充口径：
+最新补充实验还说明：
 
-- `GeoPFNMix-Lite-CatBoost-TabPFN`
-- “当前最优两个 GeoPFNMix 家族模型 + CatBoost + TabPFN”的按数据源拆分对照分析
+- `GeoPFNMix-Lite-CatBoost-TabPFN` 相对 `GeoPFNMix-Lite-CatBoost` 的提升达到统计显著（`p = 1.17e-02`）
+- 当前最优两个 GeoPFNMix 家族模型已经变为：
+  - `GeoPFNMix-CatBoost-TabPFN`
+  - `GeoPFNMix-Lite-CatBoost-TabPFN`
+- 按数据源拆分后，GeoPFNMix 家族在 `Australia`、`Brazil` 和 `China` 上整体占优，而单模型 `CatBoost` 在 `EU` 与 `USA` 上更稳健
 
-需要补充说明的是：在本轮正式重跑中，`GeoPFNMix-CatBoost-TabPFN` 仍然取得最佳均值结果，但它相对 `GeoPFNMix-CatBoost` 的额外优势未达到统计显著。因此，更稳妥的结论是：当前最强的是“CatBoost 骨干的 GeoPFNMix 家族”，而 `TabPFN` 先验是否稳定优于 `LightGBM` 先验，仍需要结合后续更多重跑与外部验证判断。
+需要补充说明的是：在本轮正式重跑中，`GeoPFNMix-CatBoost-TabPFN` 仍然取得最佳均值结果，但它相对 `GeoPFNMix-CatBoost` 的额外优势未达到统计显著（`p = 1.16e-01`）。因此，更稳妥的结论是：当前最强的是“CatBoost 骨干的 GeoPFNMix 家族”，而 `TabPFN` 先验的收益会随着结构位置不同而变化，在 Lite-CatBoost 路线上更容易表现出可检出的稳定增益。
 
 与随机划分相比，最佳单模型在 `GroupKFold(CITY)` 下的 RMSE 上升约 `24.13%`，在 `GroupKFold(PROVINCE)` 下上升约 `40.53%`，说明地理泄漏确实显著存在；也说明本项目的主结论不是“随机划分高分”，而是“严格地理协议下谁更稳健”。
 
@@ -76,7 +84,7 @@
   - 实验记录
 - `reports/项目日记.md`
   - 项目决策与推进记录
-- `paper/毕业论文终稿.md`
+- `paper/毕业论文定稿.md`
   - 当前论文提交版
 
 ## 数据字段说明
@@ -372,7 +380,7 @@ model = make_model("geopfnmix_lite_catboost")
 
 ## 论文与文档对应关系
 
-- 论文正文：`paper/毕业论文终稿.md`
+- 论文正文：`paper/毕业论文定稿.md`
 - 实验日志：`reports/实验日志.md`
 - 决策与推进记录：`reports/项目日记.md`
 - 项目阶段性评估：`reports/项目瓶颈、困难与改进方向分析.md`
