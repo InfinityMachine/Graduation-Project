@@ -1,0 +1,21 @@
+{
+  "model_name": "tabpfn_no_country",
+  "split_name": "group_city",
+  "summary": [
+    {
+      "metric": "rmse",
+      "mean": 6.783725721948988,
+      "std": 0.7132522234146197
+    },
+    {
+      "metric": "mae",
+      "mean": 3.9987873762768906,
+      "std": 0.4248552590307154
+    },
+    {
+      "metric": "r2",
+      "mean": 0.6893621364598321,
+      "std": 0.02219067652084465
+    }
+  ]
+}

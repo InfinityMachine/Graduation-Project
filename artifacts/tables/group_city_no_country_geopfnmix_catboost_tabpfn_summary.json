@@ -1,0 +1,21 @@
+{
+  "model_name": "geopfnmix_catboost_tabpfn_no_country",
+  "split_name": "group_city",
+  "summary": [
+    {
+      "metric": "rmse",
+      "mean": 6.149595826171884,
+      "std": 0.4939373645371629
+    },
+    {
+      "metric": "mae",
+      "mean": 3.421411818096126,
+      "std": 0.2565913930309624
+    },
+    {
+      "metric": "r2",
+      "mean": 0.7441013356950582,
+      "std": 0.0111419428579293
+    }
+  ]
+}

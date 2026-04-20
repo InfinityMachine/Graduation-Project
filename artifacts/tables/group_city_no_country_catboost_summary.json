@@ -1,0 +1,21 @@
+{
+  "model_name": "catboost_no_country",
+  "split_name": "group_city",
+  "summary": [
+    {
+      "metric": "rmse",
+      "mean": 6.386283597982907,
+      "std": 0.43765771816588284
+    },
+    {
+      "metric": "mae",
+      "mean": 3.8174073917565243,
+      "std": 0.26348572028634815
+    },
+    {
+      "metric": "r2",
+      "mean": 0.7234251243336154,
+      "std": 0.017147753041781528
+    }
+  ]
+}
