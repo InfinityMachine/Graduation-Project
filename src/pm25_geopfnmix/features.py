@@ -61,7 +61,8 @@ class FeatureEngineer:
 
     def transform(self, frame: pd.DataFrame) -> pd.DataFrame:
         out = self._apply_clip(frame.copy())
-        out = out[CAT_COLS + NUM_COLS].copy()
+        present_cat_cols = [col for col in CAT_COLS if col in out.columns]
+        out = out[present_cat_cols + NUM_COLS].copy()
 
         for col in self.config.log_cols:
             out[f"log1p_{col}"] = np.log1p(np.clip(out[col], a_min=0.0, a_max=None))

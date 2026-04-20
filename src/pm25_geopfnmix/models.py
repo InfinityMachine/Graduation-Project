@@ -210,7 +210,8 @@ class CatBoostTableRegressor(BaseRawRegressor):
 
     def fit(self, frame: pd.DataFrame, target: pd.Series) -> "CatBoostTableRegressor":
         engineered = self.feature_engineer.fit_transform(frame)
-        self.model.fit(engineered, target, cat_features=CAT_COLS, verbose=False)
+        cat_features = [col for col in CAT_COLS if col in engineered.columns]
+        self.model.fit(engineered, target, cat_features=cat_features, verbose=False)
         return self
 
     def predict(self, frame: pd.DataFrame) -> np.ndarray:

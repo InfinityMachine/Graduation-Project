@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd
 from scipy.stats import wilcoxon
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import GroupKFold, KFold
+from sklearn.model_selection import GroupKFold, KFold, LeaveOneGroupOut
 
 from .data import DatasetBundle
 from .models import BaseRawRegressor
-from .settings import GROUP_COL, PROVINCE_COL, RANDOM_STATE
+from .settings import COUNTRY_COL, GROUP_COL, PROVINCE_COL, RANDOM_STATE
 
 
 def compute_metrics(y_true: pd.Series | np.ndarray, y_pred: pd.Series | np.ndarray) -> dict[str, float]:
@@ -58,6 +58,9 @@ def evaluate_cv(
     elif split_name == "group_province":
         splitter = GroupKFold(n_splits=n_splits)
         split_iter = splitter.split(features, target, frame[PROVINCE_COL])
+    elif split_name == "group_country":
+        splitter = LeaveOneGroupOut()
+        split_iter = splitter.split(features, target, frame[COUNTRY_COL])
     else:
         raise ValueError(f"Unsupported split name: {split_name}")
 
@@ -76,19 +79,21 @@ def evaluate_cv(
 
         metrics = compute_metrics(test_target, fold_pred)
         metrics["fold"] = fold_id
+        if split_name == "group_country":
+            metrics["holdout_country"] = str(frame.iloc[test_idx][COUNTRY_COL].iloc[0])
         fold_rows.append(metrics)
 
-        oof_rows.append(
-            pd.DataFrame(
-                {
-                    "row_id": test_idx,
-                    "fold": fold_id,
-                    "y_true": test_target.to_numpy(),
-                    "y_pred": fold_pred,
-                    "abs_error": np.abs(test_target.to_numpy() - fold_pred),
-                }
-            )
-        )
+        oof_payload = {
+            "row_id": test_idx,
+            "fold": fold_id,
+            "y_true": test_target.to_numpy(),
+            "y_pred": fold_pred,
+            "abs_error": np.abs(test_target.to_numpy() - fold_pred),
+        }
+        if split_name == "group_country":
+            oof_payload["holdout_country"] = frame.iloc[test_idx][COUNTRY_COL].astype(str).to_numpy()
+
+        oof_rows.append(pd.DataFrame(oof_payload))
 
     fold_metrics = pd.DataFrame(fold_rows)
     oof_frame = pd.concat(oof_rows, ignore_index=True).sort_values("row_id").reset_index(drop=True)
