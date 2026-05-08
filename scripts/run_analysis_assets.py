@@ -102,6 +102,20 @@ def _format_model_names(frame: pd.DataFrame, column: str = "model_name") -> pd.D
     return out
 
 
+def _selected_country_plot_label(model_name: str) -> str:
+    short_labels = {
+        "geopfnmix_catboost_tabpfn": "GeoPFNMix-CB-TabPFN",
+        "geopfnmix_lite_catboost_tabpfn": "GeoPFNMix-Lite-CB-TabPFN",
+        "geopfnmix_catboost": "GeoPFNMix-CB",
+        "geopfnmix_lite_catboost": "GeoPFNMix-Lite-CB",
+        "geopfnmix_no_residual_tabpfn": "GeoPFNMix-Lite-TabPFN",
+        "geopfnmix_no_residual": "GeoPFNMix-Lite",
+        "catboost": "CatBoost",
+        "tabpfn": "TabPFN",
+    }
+    return short_labels.get(model_name, MODEL_LABELS.get(model_name, model_name))
+
+
 def _order_country_summary(summary: pd.DataFrame) -> pd.DataFrame:
     extra_countries = [name for name in summary["country"].tolist() if name not in PREFERRED_COUNTRY_ORDER]
     category_order = [name for name in PREFERRED_COUNTRY_ORDER if name in summary["country"].tolist()] + extra_countries
@@ -366,7 +380,7 @@ def save_selected_models_country_breakdown(dataset, model_names: list[str]) -> N
             ordered_model_names.append(model_name)
 
     summary_frames: list[pd.DataFrame] = []
-    model_label_order = [MODEL_LABELS.get(model_name, model_name) for model_name in ordered_model_names]
+    model_label_order = [_selected_country_plot_label(model_name) for model_name in ordered_model_names]
 
     for model_name, model_label in zip(ordered_model_names, model_label_order):
         prediction_frame = _load_prediction_frame(dataset, model_name)
@@ -409,7 +423,7 @@ def save_selected_models_country_breakdown(dataset, model_names: list[str]) -> N
         ("mae", "MAE", "crest", None),
         ("r2", "R²", "coolwarm", 0.0),
     ]
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(20, 7.25), constrained_layout=False)
     for axis, (metric_name, metric_label, cmap, center) in zip(axes, metric_specs):
         heatmap_frame = (
             combined.pivot(index="model_label", columns="country", values=metric_name)
@@ -426,17 +440,20 @@ def save_selected_models_country_breakdown(dataset, model_names: list[str]) -> N
             linecolor="white",
             cbar=True,
             ax=axis,
+            annot_kws={"size": 12},
         )
-        axis.set_title(f"{metric_label} by Data Source")
+        axis.set_title(f"{metric_label} by Data Source", fontsize=16, pad=10)
         axis.set_xlabel("")
-        axis.set_ylabel("Model" if metric_name == "rmse" else "")
-        axis.set_xticklabels(country_labels, rotation=0)
+        axis.set_ylabel("Model" if metric_name == "rmse" else "", fontsize=14)
+        axis.set_xticklabels(country_labels, rotation=20, ha="right")
         axis.set_yticklabels(axis.get_yticklabels(), rotation=0)
+        axis.tick_params(axis="x", labelsize=12)
+        axis.tick_params(axis="y", labelsize=12, pad=8)
         if metric_name != "rmse":
             axis.tick_params(axis="y", labelleft=False)
 
-    fig.suptitle("Selected Models Performance by Data Source", y=1.02)
-    fig.tight_layout()
+    fig.suptitle("Selected Models Performance by Data Source", y=0.97, fontsize=20)
+    fig.subplots_adjust(left=0.24, right=0.985, top=0.86, bottom=0.18, wspace=0.18)
     fig.savefig(FIGURES_DIR / "selected_models_country_metrics.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 

@@ -1,83 +1,88 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="840" viewBox="0 0 1360 840">
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
     </marker>
     <style>
-      .title { font: 700 28px 'Arial', 'Helvetica', sans-serif; fill:#0f172a; }
-      .label { font: 600 20px 'Arial', 'Helvetica', sans-serif; fill:#0f172a; }
+      .title { font: 700 30px 'Arial', 'Helvetica', sans-serif; fill:#0f172a; }
+      .label { font: 700 21px 'Arial', 'Helvetica', sans-serif; fill:#0f172a; }
       .text { font: 17px 'Arial', 'Helvetica', sans-serif; fill:#334155; }
-      .box { fill:#f8fafc; stroke:#334155; stroke-width:2; rx:16; ry:16; }
-      .soft { fill:#eef2ff; }
-      .soft2 { fill:#ecfeff; }
-      .soft3 { fill:#fef3c7; }
-      .soft4 { fill:#dcfce7; }
+      .note { font: 16px 'Arial', 'Helvetica', sans-serif; fill:#475569; }
+      .box { fill:#f8fafc; stroke:#334155; stroke-width:2.2; rx:18; ry:18; }
+      .soft-a { fill:#eef2ff; }
+      .soft-b { fill:#ecfeff; }
+      .soft-c { fill:#fef3c7; }
+      .soft-d { fill:#dcfce7; }
       .line { stroke:#334155; stroke-width:3; fill:none; marker-end:url(#arrow); }
       .dash { stroke:#64748b; stroke-width:2.5; stroke-dasharray:8 8; fill:none; marker-end:url(#arrow); }
     </style>
   </defs>
 
-  <text x="600" y="48" text-anchor="middle" class="title">GeoPFNMix Framework</text>
+  <text x="680" y="54" text-anchor="middle" class="title">GeoPFNMix Framework</text>
 
-  <rect x="60" y="120" width="210" height="90" class="box soft"/>
-  <text x="165" y="160" text-anchor="middle" class="label">Input Features</text>
-  <text x="165" y="188" text-anchor="middle" class="text">Pollution, weather,</text>
-  <text x="165" y="212" text-anchor="middle" class="text">agriculture, geography</text>
+  <rect x="70" y="140" width="230" height="100" class="box soft-a"/>
+  <text x="185" y="182" text-anchor="middle" class="label">Input Features</text>
+  <text x="185" y="212" text-anchor="middle" class="text">Pollution, weather,</text>
+  <text x="185" y="236" text-anchor="middle" class="text">agriculture, geography</text>
 
-  <rect x="60" y="300" width="210" height="90" class="box soft2"/>
-  <text x="165" y="340" text-anchor="middle" class="label">Group Metadata</text>
-  <text x="165" y="368" text-anchor="middle" class="text">Country / Province / City</text>
+  <rect x="70" y="350" width="230" height="96" class="box soft-b"/>
+  <text x="185" y="392" text-anchor="middle" class="label">Group Metadata</text>
+  <text x="185" y="422" text-anchor="middle" class="text">Country / Province / City</text>
 
-  <rect x="340" y="95" width="240" height="110" class="box"/>
-  <text x="460" y="138" text-anchor="middle" class="label">Global Expert</text>
-  <text x="460" y="168" text-anchor="middle" class="text">RF or CatBoost</text>
-  <text x="460" y="192" text-anchor="middle" class="text">learns shared nonlinear law</text>
+  <rect x="380" y="115" width="270" height="125" class="box"/>
+  <text x="515" y="158" text-anchor="middle" class="label">Global Expert</text>
+  <text x="515" y="191" text-anchor="middle" class="text">RF or CatBoost</text>
+  <text x="515" y="218" text-anchor="middle" class="text">learns shared nonlinear law</text>
 
-  <rect x="340" y="255" width="240" height="110" class="box"/>
-  <text x="460" y="298" text-anchor="middle" class="label">Prior Expert</text>
-  <text x="460" y="328" text-anchor="middle" class="text">LightGBM or TabPFN</text>
-  <text x="460" y="352" text-anchor="middle" class="text">adds heterogeneous prior</text>
+  <rect x="380" y="290" width="270" height="125" class="box"/>
+  <text x="515" y="333" text-anchor="middle" class="label">Prior Expert</text>
+  <text x="515" y="366" text-anchor="middle" class="text">LightGBM or TabPFN</text>
+  <text x="515" y="393" text-anchor="middle" class="text">adds heterogeneous prior</text>
 
-  <rect x="660" y="95" width="220" height="110" class="box soft3"/>
-  <text x="770" y="138" text-anchor="middle" class="label">Global Prediction</text>
-  <text x="770" y="170" text-anchor="middle" class="text">y^(g)</text>
+  <rect x="750" y="115" width="240" height="120" class="box soft-c"/>
+  <text x="870" y="160" text-anchor="middle" class="label">Global Prediction</text>
+  <text x="870" y="195" text-anchor="middle" class="text">y^(g)</text>
 
-  <rect x="660" y="255" width="220" height="110" class="box soft4"/>
-  <text x="770" y="298" text-anchor="middle" class="label">Prior Prediction</text>
-  <text x="770" y="330" text-anchor="middle" class="text">y^(p)</text>
+  <rect x="750" y="290" width="240" height="120" class="box soft-d"/>
+  <text x="870" y="335" text-anchor="middle" class="label">Prior Prediction</text>
+  <text x="870" y="370" text-anchor="middle" class="text">y^(p)</text>
 
-  <rect x="660" y="430" width="260" height="145" class="box"/>
-  <text x="790" y="468" text-anchor="middle" class="label">Hierarchical Residual Correction</text>
-  <text x="790" y="500" text-anchor="middle" class="text">Province-level shrinkage</text>
-  <text x="790" y="526" text-anchor="middle" class="text">City-level shrinkage</text>
-  <text x="790" y="552" text-anchor="middle" class="text">unseen groups shrink to zero</text>
+  <rect x="710" y="500" width="330" height="175" class="box"/>
+  <text x="875" y="542" text-anchor="middle" class="label">Hierarchical Residual</text>
+  <text x="875" y="572" text-anchor="middle" class="label">Correction</text>
+  <text x="875" y="606" text-anchor="middle" class="text">Province-level shrinkage</text>
+  <text x="875" y="632" text-anchor="middle" class="text">City-level shrinkage</text>
+  <text x="875" y="658" text-anchor="middle" class="text">unseen groups shrink to zero</text>
 
-  <rect x="980" y="170" width="170" height="110" class="box soft2"/>
-  <text x="1065" y="212" text-anchor="middle" class="label">Meta Features</text>
-  <text x="1065" y="240" text-anchor="middle" class="text">support, disagreement,</text>
-  <text x="1065" y="264" text-anchor="middle" class="text">expert outputs</text>
+  <rect x="1100" y="205" width="200" height="120" class="box soft-b"/>
+  <text x="1200" y="248" text-anchor="middle" class="label">Meta Features</text>
+  <text x="1200" y="280" text-anchor="middle" class="text">support, disagreement,</text>
+  <text x="1200" y="306" text-anchor="middle" class="text">expert outputs</text>
 
-  <rect x="980" y="380" width="170" height="110" class="box soft3"/>
-  <text x="1065" y="422" text-anchor="middle" class="label">Linear Stacking</text>
-  <text x="1065" y="450" text-anchor="middle" class="text">low-capacity fusion</text>
+  <rect x="1100" y="420" width="200" height="120" class="box soft-c"/>
+  <text x="1200" y="465" text-anchor="middle" class="label">Linear Stacking</text>
+  <text x="1200" y="499" text-anchor="middle" class="text">low-capacity fusion</text>
 
-  <rect x="980" y="560" width="170" height="90" class="box soft4"/>
-  <text x="1065" y="603" text-anchor="middle" class="label">Final Prediction</text>
-  <text x="1065" y="630" text-anchor="middle" class="text">PM2.5 estimate</text>
+  <rect x="1100" y="620" width="200" height="95" class="box soft-d"/>
+  <text x="1200" y="663" text-anchor="middle" class="label">Final Prediction</text>
+  <text x="1200" y="691" text-anchor="middle" class="text">PM2.5 estimate</text>
 
-  <path d="M270 165 L340 150" class="line"/>
-  <path d="M270 165 L340 310" class="line"/>
-  <path d="M580 150 L660 150" class="line"/>
-  <path d="M580 310 L660 310" class="line"/>
-  <path d="M270 345 L660 500" class="dash"/>
-  <path d="M770 205 L770 430" class="line"/>
-  <path d="M880 150 L980 210" class="line"/>
-  <path d="M880 310 L980 240" class="line"/>
-  <path d="M920 500 L980 435" class="line"/>
-  <path d="M1065 280 L1065 380" class="line"/>
-  <path d="M1065 490 L1065 560" class="line"/>
+  <path d="M300 190 L380 178" class="line"/>
+  <path d="M300 190 L380 352" class="line"/>
+  <path d="M650 178 L750 175" class="line"/>
+  <path d="M650 352 L750 350" class="line"/>
+  <path d="M300 398 L710 588" class="dash"/>
+  <path d="M870 235 L870 500" class="line"/>
+  <path d="M990 175 L1100 248" class="line"/>
+  <path d="M990 350 L1100 286" class="line"/>
+  <path d="M1040 588 L1100 480" class="line"/>
+  <path d="M1200 325 L1200 420" class="line"/>
+  <path d="M1200 540 L1200 620" class="line"/>
 
-  <text x="610" y="694" text-anchor="middle" class="text">
-    Global expert captures shared signal; hierarchical correction models group bias; prior expert adds complementary inductive bias.
+  <text x="680" y="770" text-anchor="middle" class="note">
+    Global expert captures shared signal; hierarchical correction absorbs group bias;
+  </text>
+  <text x="680" y="798" text-anchor="middle" class="note">
+    prior expert contributes complementary inductive bias before low-capacity fusion.
   </text>
 </svg>

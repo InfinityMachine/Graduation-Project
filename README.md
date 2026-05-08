@@ -57,6 +57,14 @@
   - `GeoPFNMix-CatBoost-TabPFN`
   - `GeoPFNMix-Lite-CatBoost-TabPFN`
 - 按数据源拆分后，GeoPFNMix 家族在 `Australia`、`Brazil` 和 `China` 上整体占优，而单模型 `CatBoost` 在 `EU` 与 `USA` 上更稳健
+- leave-one-country-out 验证下，真正的跨来源外推更困难，当前最佳均值模型转为 `GeoPFNMix-Lite-CatBoost`
+  - `RMSE = 9.5264`
+  - `MAE = 8.0430`
+  - `R² = -3.1767`
+- 去掉 `COUNTRY` 特征后，各模型性能均明显下降
+  - `CatBoost` 的 RMSE 从 `6.0296` 上升到 `6.3863`
+  - `GeoPFNMix-CatBoost-TabPFN` 的 RMSE 从 `5.9192` 上升到 `6.1496`
+  - 说明当前方法虽然不仅仅是在“记忆来源标签”，但对来源代理信息仍存在一定依赖
 
 需要补充说明的是：在本轮正式重跑中，`GeoPFNMix-CatBoost-TabPFN` 仍然取得最佳均值结果，但它相对 `GeoPFNMix-CatBoost` 的额外优势未达到统计显著（`p = 1.16e-01`）。因此，更稳妥的结论是：当前最强的是“CatBoost 骨干的 GeoPFNMix 家族”，而 `TabPFN` 先验的收益会随着结构位置不同而变化，在 Lite-CatBoost 路线上更容易表现出可检出的稳定增益。
 
@@ -76,6 +84,8 @@
   - 运行 GeoPFNMix 家族模型、补充变体、消融实验和显著性检验
 - `scripts/run_analysis_assets.py`
   - 基于实验结果生成论文用图表、分析表、最佳模型按数据源拆分表现，以及“最优两个 GeoPFNMix 模型 + CatBoost + TabPFN”的来源对照
+- `scripts/run_robustness_checks.py`
+  - 运行 leave-one-country-out 跨来源外推验证，以及去除 `COUNTRY` 特征的鲁棒性对照
 - `artifacts/figures/`
   - 自动生成的图像输出
 - `artifacts/tables/`
@@ -123,6 +133,7 @@ python scripts/run_eda.py
 python scripts/run_baselines.py --device auto
 python scripts/run_geopfnmix.py --device auto
 python scripts/run_analysis_assets.py
+python scripts/run_robustness_checks.py --device auto
 ```
 
 各脚本作用如下：
@@ -139,6 +150,10 @@ python scripts/run_analysis_assets.py
   - 支持 `--device auto/cpu/gpu`
 4. `run_analysis_assets.py`
    - 读取前面脚本生成的表格，自动绘制论文图表、补充分析表、最佳模型按数据源拆分表现，以及“最优两个 GeoPFNMix 模型 + CatBoost + TabPFN”的按来源对照
+5. `run_robustness_checks.py`
+   - 运行 leave-one-country-out 与去除 `COUNTRY` 特征对照
+   - 支持 `--device auto/cpu/gpu`
+   - 可额外使用 `--include-tabpfn` 把单模型 `TabPFN` 一并纳入鲁棒性验证
 
 ## 主要输出文件
 
